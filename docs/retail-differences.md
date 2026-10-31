@@ -118,7 +118,38 @@ Gold Tracker by its heading. Forever has the same trap.
 Forever's other changes to these rows.
 
 
-## 3. Still Forever's, for later steps
+## 3. Auction prices and listing lengths
+
+`Core/Util.lua`, `Logic/Profit.lua`, `Logic/Posting.lua`,
+`Logic/SellOut.lua`, `UI/PostPanel.lua` (a comment), the five locale files
+(`L["48 hours"]`), `tools/test_wholesilver.lua`, and one line in each of
+`tools/test_altpricing.lua`, `test_crafttime.lua`, `test_derivedprice.lua`,
+`test_disenchantrows.lua`, `test_fastlisting.lua`, `test_overcutting.lua`,
+`test_ownprice.lua`, `test_profitways.lua`, `test_quantity.lua`,
+`test_silverstep.lua`, `test_uncontested.lua`, `test_vendorpile.lua` and
+`test_vendorvalue.lua` (`ns.Util.WHOLE_SILVER_ONLY = false`, so they keep
+testing Forever's copper rules). `tools/test_sellout.lua` uses Retail's
+lengths. PR: "Fix auction posting" (2026-10-31).
+
+- Retail's auction house takes whole gold and silver for every listing,
+  stacks (commodities) too, and quietly turns a stack priced with copper
+  down: the addon said "listing..." and then "did not appear in your
+  auctions". Forever lets stacks keep copper. `Util.WHOLE_SILVER_ONLY =
+  true` (Retail only) makes every place that left a commodity's copper
+  alone round it to whole silver: `Profit`'s `RoundForSale`, market value,
+  the undercut (a 1c undercut becomes the silver below), Undercut by 0c,
+  Highest, Overcutting, and `Posting:NormalisePrice` and the last check in
+  `Posting:Post`.
+- Listing lengths are Retail's 12, 24 and 48 hours (`Posting.DURATIONS`,
+  `SellOut.SECONDS`, `SellOut.LABELS`). The values the game takes, 1, 2 and
+  3, are the same, so saved `postDuration` picks keep working.
+
+**Sync rule: Blend.** Keep the flag and the `Util.WHOLE_SILVER_ONLY` checks.
+A new Forever price path that leaves commodities in copper gets the same
+check, and a Forever test that loads `Core/Util.lua` and expects a
+commodity's copper gets the `WHOLE_SILVER_ONLY = false` line.
+
+## 4. Still Forever's, for later steps
 
 Not changed in the copy, on purpose (no new player features yet). Each is
 its own step in the port plan, on the owner's yes:

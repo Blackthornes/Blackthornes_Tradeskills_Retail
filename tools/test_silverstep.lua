@@ -77,6 +77,8 @@ ns.Posting = {
 }
 
 assert(loadfile(lfs_cwd .. "/Core/Util.lua"))("Blackthornes_TS", ns)
+-- Forever's copper prices for stacks; Retail's whole silver is in test_wholesilver.lua.
+ns.Util.WHOLE_SILVER_ONLY = false
 assert(loadfile(lfs_cwd .. "/Logic/Profit.lua"))("Blackthornes_TS", ns)
 
 local Util, Profit = ns.Util, ns.Profit

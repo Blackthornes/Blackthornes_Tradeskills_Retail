@@ -849,6 +849,12 @@ function Util.CeilToSilver(price)
     return math.ceil(price / COPPER_PER_SILVER) * COPPER_PER_SILVER
 end
 
+--- Retail's auction house takes whole gold and silver for every listing,
+--- stacks (commodities) too, and quietly turns down a price with copper in
+--- it. Forever lets commodities keep copper. Retail only (see
+--- docs/retail-differences.md).
+Util.WHOLE_SILVER_ONLY = true
+
 --- Is this price one an item auction will accept?
 function Util.IsWholeSilver(price)
     return type(price) == "number" and price >= COPPER_PER_SILVER

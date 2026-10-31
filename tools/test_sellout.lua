@@ -88,11 +88,11 @@ sold(POTION) sold(POTION)
 S:MailRead(true)
 check("before the listings run out nothing changes", ns.db.postLimits[POTION] == nil)
 
-now = start + 3600 + 8 * 3600 + 600
+now = start + 3600 + 24 * 3600 + 600
 S:MailRead(true)
 check("every copy sold: Keep in stock 3 becomes 4", ns.db.postLimits[POTION] == 4)
 check("the player is told, once", #printed == 1 and printed[1]:find("item100", 1, true)
-    and printed[1]:find("8 hours", 1, true) and printed[1]:find("4", 1, true))
+    and printed[1]:find("24 hours", 1, true) and printed[1]:find("4", 1, true))
 check("with a little cheer", sounds == 1)
 check("the raise is kept for the Profit tab", S:GetRaised(POTION).from == 3 and S:GetRaised(POTION).to == 4)
 check("the window is closed", ns.db.sellOutWatch["Realm-A"][who][POTION] == nil)
@@ -104,16 +104,16 @@ local swordFrom = now
 S:NotePosted(SWORD, 2, 2)
 now = now + 1000
 sold(SWORD)
-now = swordFrom + 8 * 3600 + 300
-back(SWORD, swordFrom + 8 * 3600)
+now = swordFrom + 24 * 3600 + 300
+back(SWORD, swordFrom + 24 * 3600)
 S:MailRead(true)
 check("one came back: nothing changes", ns.db.postLimits[SWORD] == nil)
 check("and the window is let go", ns.db.sellOutWatch["Realm-A"][who][SWORD] == nil)
 
 -- 3. Listed, nothing back, no sale seen yet: waits.
 local again = now
-S:NotePosted(SWORD, 1, 1)   -- 2 hours
-now = again + 2 * 3600 + 300
+S:NotePosted(SWORD, 1, 1)   -- 12 hours
+now = again + 12 * 3600 + 300
 S:MailRead(true)
 check("no sale seen yet: it waits", ns.db.postLimits[SWORD] == nil
     and #ns.db.sellOutWatch["Realm-A"][who][SWORD] == 1)
@@ -121,12 +121,12 @@ heard[#heard + 1] = { t = again + 600, itemID = SWORD, who = who }
 now = now + 3600
 S:MailRead(true)
 check("the game's sale notice counts as a sale: 2 becomes 3", ns.db.postLimits[SWORD] == 3)
-check("a 2 hour listing says 2 hours", printed[#printed]:find("2 hours", 1, true) ~= nil)
+check("a 12 hour listing says 12 hours", printed[#printed]:find("12 hours", 1, true) ~= nil)
 
 -- 7. A part-read mailbox judges nothing.
 local cut = now
 S:NotePosted(POTION, 1, 1)
-now = cut + 2 * 3600 + 300
+now = cut + 12 * 3600 + 300
 sold(POTION)
 S:MailRead(false)
 check("a part-read mailbox judges nothing", ns.db.postLimits[POTION] == 4)
@@ -145,7 +145,7 @@ S:NotePosted(FREE, 2, 1)
 S:NotePosted(CLOTH, 2, 1)
 check("an item none of your recipes make is not watched",
     ns.db.sellOutWatch["Realm-A"][who][CLOTH] == nil)
-now = free + 2 * 3600 + 300
+now = free + 12 * 3600 + 300
 sold(FREE)
 S:MailRead(true)
 check("no limit stays no limit", ns.db.postLimits[FREE] == nil)
@@ -164,7 +164,7 @@ settings.raiseStockOnSellOut = true
 ns.db.postLimits[SWORD] = 7
 local high = now
 S:NotePosted(SWORD, 1, 1)
-now = high + 2 * 3600 + 300
+now = high + 12 * 3600 + 300
 sold(SWORD)
 S:MailRead(true)
 check("a typed number is raised from there", ns.db.postLimits[SWORD] == 8
@@ -174,8 +174,8 @@ check("a typed number is raised from there", ns.db.postLimits[SWORD] == 8
 local function unsold(itemID)
     local from = now
     S:NotePosted(itemID, 1, 1)
-    now = from + 2 * 3600 + 300
-    back(itemID, from + 2 * 3600)
+    now = from + 12 * 3600 + 300
+    back(itemID, from + 12 * 3600)
     S:MailRead(true)
 end
 local function sellout(itemID)
@@ -183,7 +183,7 @@ local function sellout(itemID)
     S:NotePosted(itemID, 1, 1)
     now = from + 600
     sold(itemID)
-    now = from + 2 * 3600 + 300
+    now = from + 12 * 3600 + 300
     S:MailRead(true)
 end
 local before = #printed

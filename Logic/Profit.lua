@@ -133,7 +133,7 @@ end
 -- beneath, and rounding down by up to a silver can put a cheap craft under
 -- what its materials cost, which Posting would then refuse to list.
 local function RoundForSale(price, isCommodity)
-    if isCommodity then return price end
+    if isCommodity and not Util.WHOLE_SILVER_ONLY then return price end
     return Util.CeilToSilver(price)
 end
 
@@ -209,7 +209,7 @@ function Profit:ChoosePostPrice(itemID, knownCost, link)
 
     -- Highest: never list above it. An item auction takes whole silver only,
     -- so it rounds down. Under the Lowest Price it means nothing and is left out.
-    local top = high and (status == false and Util.RoundToSilver(high) or high)
+    local top = high and ((status == false or Util.WHOLE_SILVER_ONLY == true) and Util.RoundToSilver(high) or high)
     if top and floor and top < floor then top = nil end
 
     if floor and (not price or price < floor) then
@@ -307,9 +307,9 @@ function Profit:ChooseMarketPostPrice(itemID, knownCost, link)
                 L.Format("nothing else is listed, so it is %s", markup), uncertain
         end
 
-        if isCommodity then return market, "market", nil, uncertain end
+        if isCommodity and not Util.WHOLE_SILVER_ONLY then return market, "market", nil, uncertain end
 
-        return Util.RoundToSilver(market), "market"
+        return Util.RoundToSilver(market), "market", nil, uncertain
     end
 
     local undercut = ns.Config:Get("undercutCopper") or 1
@@ -326,12 +326,16 @@ function Profit:ChooseMarketPostPrice(itemID, knownCost, link)
     -- commodities and item auctions alike, and say that is why.
     if undercut <= 0 then
         local price = math.max(1, math.floor(rival))
-        if not isCommodity then price = Util.RoundToSilver(price) end
+        if not isCommodity or Util.WHOLE_SILVER_ONLY then price = Util.RoundToSilver(price) end
         return price, "match", MATCH_BY_CHOICE, uncertain
     end
 
     if isCommodity then
-        return math.max(1, math.floor(rival - undercut)), "undercut", nil, uncertain
+        local price = math.max(1, math.floor(rival - undercut))
+        -- Retail takes whole silver for stacks too, so a 1c undercut becomes
+        -- the silver below.
+        if Util.WHOLE_SILVER_ONLY then price = Util.RoundToSilver(price) end
+        return price, "undercut", nil, uncertain
     end
 
     local matchPrice = Util.RoundToSilver(rival)
@@ -428,6 +432,8 @@ function Profit:Overcut(itemID, rival, undercut)
     if not wall then return nil end
 
     local price = math.max(1, math.floor(wall - math.max(0, undercut or 1)))
+    -- Retail: whole silver for stacks too, so a silver or so under the wall.
+    if Util.WHOLE_SILVER_ONLY then price = Util.RoundToSilver(price) end
     if price <= rival then return nil end
 
     local market = ns.Prices.GetScanValue and ns.Prices:GetScanValue(itemID, "market")

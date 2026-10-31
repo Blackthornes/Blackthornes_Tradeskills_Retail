@@ -3,7 +3,7 @@
 -- one fewer again once it keeps coming back unsold.
 --
 -- The owner asked (2026-10-13): when every copy of a craft you listed sells
--- within the auction's time (8 hours by default), Keep in stock for that
+-- within the auction's time (24 hours by default), Keep in stock for that
 -- item goes up by 1. It only ever goes up, once a window, and only while
 -- "Raise it when it sells out" is ticked (raiseStockOnSellOut, off unless
 -- ticked).
@@ -42,8 +42,9 @@ local L = ns.L or setmetatable({ Format = string.format }, { __index = function(
 local SellOut = ns.NewModule("SellOut")
 
 -- Seconds an auction stays up for each postDuration (Logic/Posting.lua).
-SellOut.SECONDS = { [1] = 2 * 3600, [2] = 8 * 3600, [3] = 24 * 3600 }
-SellOut.LABELS = { [1] = L["2 hours"], [2] = L["8 hours"], [3] = L["24 hours"] }
+-- Retail's lengths (Forever's are 2, 8 and 24 hours).
+SellOut.SECONDS = { [1] = 12 * 3600, [2] = 24 * 3600, [3] = 48 * 3600 }
+SellOut.LABELS = { [1] = L["12 hours"], [2] = L["24 hours"], [3] = L["48 hours"] }
 
 -- An expired auction's mail can take a moment to land.
 SellOut.SLACK = 120
