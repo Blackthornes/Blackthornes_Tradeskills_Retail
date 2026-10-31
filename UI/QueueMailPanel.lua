@@ -27,6 +27,10 @@ local Util = ns.Util
 local QueueMailPanel = {}
 ns.QueueMailPanel = QueueMailPanel
 
+-- Forever's characters have last names, and a mail needs one the addon has
+-- not read yet typed in. Retail (this copy only) has none, so it never asks.
+QueueMailPanel.ASKS_LAST_NAME = false
+
 local WIDTH = 286
 local PAD = 12
 local ROW_HEIGHT = 44
@@ -475,8 +479,9 @@ function QueueMailPanel:FillFor(row)
         -- Forever's characters share first names, so the mail needs the
         -- last name too. One not yet on record (that character has not
         -- logged in since last names were read) has to be typed.
+        -- Retail has no last names, so it never asks (QueueMailPanel.ASKS_LAST_NAME).
         local record = delivery.to and ns.db and ns.db.characters and ns.db.characters[delivery.to]
-        if type(record) == "table" and not record.surname then
+        if QueueMailPanel.ASKS_LAST_NAME and type(record) == "table" and not record.surname then
             texts = { L.Format("Type %s's last name after the first, then press Send.", short),
                 L["Add the last name, then Send."] }
         end

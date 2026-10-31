@@ -4,6 +4,17 @@ Versions follow [semantic versioning](https://semver.org): the middle number
 moves for new behaviour, the last for fixes alone. The newest version goes at
 the top; a release is refused if its version has no section here.
 
+## 1.6.0
+
+The first Tradeskills for Retail WoW (interface 120105).
+
+- Tradeskills scans the auction house and keeps track of prices, so you know what your crafts and materials are worth.
+- The Profit tab shows which of your crafts make the most gold after the auction house cut.
+- Queue your crafts and Tradeskills makes a shopping list of what you still need. The Craft next button makes them one at a time.
+- At the auction house, the Sell list prices what you made, and the Auctions view shows when someone sells for less than you.
+- If you use TradeSkillMaster or Auctionator, their prices fill in what you haven't scanned.
+- With Blackthornes Farmer, both share one window, and the Gather tab sets Farmer goals for the materials you need.
+
 ## 1.5.0
 
 For WoW: Forever (interface 16001). Files were added, so restart the game fully after updating (`/reload` is not enough).

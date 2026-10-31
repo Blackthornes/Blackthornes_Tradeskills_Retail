@@ -63,6 +63,12 @@ local widgets = {}
 
 --- An Off / Shift / Always box (see the Look page) set to the saved mode,
 --- without calling its onSelect.
+-- Retail (this copy only): Blackthornes Equipment has no Retail version
+-- yet, so the rows that need it show only while it is loaded.
+local function HasEquipment()
+    return ns.Upgrades ~= nil and ns.Upgrades.Equipment ~= nil and ns.Upgrades:Equipment() ~= nil
+end
+
 local function ShowShiftMode(dropdown)
     local setting = dropdown.shiftSetting
     local isOn = setting == nil or ns.Config:Get(setting) ~= false
@@ -907,7 +913,7 @@ local function Build(outer)
     -- Logic/SisterKeeps.lua (2026-10-16): what the other Blackthornes
     -- addons want kept stays off List all.
     local sisterKeepsRow = CreateRow(pages.pricing, 1, L["Keep What Other Addons Need:"],
-        L["Goal items, your upgrades and pet food stay off List all. What Butler keeps always does."])
+        L["Items your Blackthornes Farmer goals still need stay off List all."])
 
     widgets.sisterKeeps = Widgets.CreateCheckbox(sisterKeepsRow, L["On"], function(checked)
         Config:Set("sellHoldsSisterKeeps", checked)
@@ -919,16 +925,20 @@ local function Build(outer)
 
     -- Off unless ticked (the owner, 2026-10-16): gear for another
     -- character goes up with everything else.
-    local altKeepsRow = CreateRow(pages.pricing, 1, L["Keep Upgrades for Alts:"],
-        L["Gear your other characters could wear stays off List all."])
+    -- Retail (this copy only): the row needs Blackthornes Equipment, which
+    -- has no Retail version yet, so it shows only while Equipment is loaded.
+    if HasEquipment() then
+        local altKeepsRow = CreateRow(pages.pricing, 1, L["Keep Upgrades for Alts:"],
+            L["Gear your other characters could wear stays off List all."])
 
-    widgets.altKeeps = Widgets.CreateCheckbox(altKeepsRow, L["On"], function(checked)
-        Config:Set("sellHoldsAltUpgrades", checked)
-        if ns.SisterKeeps then ns.SisterKeeps:Forget() end
-        UI:RefreshActiveTab()
-        if ns.PostPanel and ns.PostPanel.Refresh then ns.PostPanel:Refresh() end
-    end, false)
-    widgets.altKeeps:SetPoint("TOPLEFT", CONTROL_X, -2)
+        widgets.altKeeps = Widgets.CreateCheckbox(altKeepsRow, L["On"], function(checked)
+            Config:Set("sellHoldsAltUpgrades", checked)
+            if ns.SisterKeeps then ns.SisterKeeps:Forget() end
+            UI:RefreshActiveTab()
+            if ns.PostPanel and ns.PostPanel.Refresh then ns.PostPanel:Refresh() end
+        end, false)
+        widgets.altKeeps:SetPoint("TOPLEFT", CONTROL_X, -2)
+    end
 
     -- The old "Confirm before each listing" switch (confirmBeforePosting)
     -- never did anything and its saved value is left where it is. The Yes/No
@@ -1381,15 +1391,19 @@ local function Build(outer)
     recipeList:SetPoint("TOPLEFT", CONTROL_X, -2)
     FitButton(recipeList)
 
-    local upgradeRow = CreateRow(pages.look, 1, L["Upgrade Arrows:"],
-        L["A green arrow on gear that's an upgrade for you. Needs Blackthornes Equipment."])
+    -- Retail (this copy only): the row needs Blackthornes Equipment, which
+    -- has no Retail version yet, so it shows only while Equipment is loaded.
+    if HasEquipment() then
+        local upgradeRow = CreateRow(pages.look, 1, L["Upgrade Arrows:"],
+            L["A green arrow on gear that's an upgrade for you. Needs Blackthornes Equipment."])
 
-    widgets.upgradeArrows = Widgets.CreateCheckbox(upgradeRow, L["On"], function(checked)
-        Config:Set("showUpgradeArrows", checked)
-        if ns.Upgrades then ns.Upgrades:Forget() end
-        UI:RefreshActiveTab()
-    end, true)
-    widgets.upgradeArrows:SetPoint("TOPLEFT", CONTROL_X, -2)
+        widgets.upgradeArrows = Widgets.CreateCheckbox(upgradeRow, L["On"], function(checked)
+            Config:Set("showUpgradeArrows", checked)
+            if ns.Upgrades then ns.Upgrades:Forget() end
+            UI:RefreshActiveTab()
+        end, true)
+        widgets.upgradeArrows:SetPoint("TOPLEFT", CONTROL_X, -2)
+    end
 
     -- Logic/Cooldowns.lua (asked 2026-10-12): a line in chat when a
     -- transmute, Mooncloth or the Salt Shaker is ready on any character,
@@ -1796,7 +1810,7 @@ local function Build(outer)
     CreateSection(pages.sharing, 1, L["ACCOUNT LINK"])
 
     local linkRow = CreateRow(pages.sharing, 1, L["Your Other Account:"],
-        L["Type your other account's characters, first and last name, with commas. Type this character's name over there too."])
+        L["Type your other account's character names, with commas. Type this character's name over there too."])
 
     widgets.linkNames = Widgets.CreateSearchBox(linkRow, L["Character names"], function(text)
         if ns.AccountLink then ns.AccountLink:SetNames(text) end
@@ -2329,7 +2343,7 @@ local function Refresh()
     widgets.allowLoss:SetChecked(Config:Get("allowPostingAtALoss") == true)
     widgets.neverBelowPaid:SetChecked(Config:Get("neverBelowCraftedCost") == true)
     widgets.sisterKeeps:SetChecked(Config:Get("sellHoldsSisterKeeps") == true)
-    widgets.altKeeps:SetChecked(Config:Get("sellHoldsAltUpgrades") == true)
+    if widgets.altKeeps then widgets.altKeeps:SetChecked(Config:Get("sellHoldsAltUpgrades") == true) end
     widgets.verifyPrice:SetChecked(Config:Get("verifyPriceBeforePosting") ~= false)
     widgets.fastListing:SetChecked(Config:Get("fastListing") ~= false)
     widgets.askBeforeListing:SetChecked(Config:Get("askBeforeListing") == true)
@@ -2367,7 +2381,7 @@ local function Refresh()
     ShowShiftMode(widgets.tooltipValue)
     ShowShiftMode(widgets.tooltipSalesShift)
     ShowShiftMode(widgets.tooltipTrend)
-    widgets.upgradeArrows:SetChecked(Config:Get("showUpgradeArrows") ~= false)
+    if widgets.upgradeArrows then widgets.upgradeArrows:SetChecked(Config:Get("showUpgradeArrows") ~= false) end
     widgets.sisters:SetChecked(ns.SisterNote:IsOn())
     if ns.WhatsNew then
         widgets.whatsNewPopup:SetChecked(ns.WhatsNew:IsOn())

@@ -966,7 +966,7 @@ local function UpdateDetail(entry)
     if facts.source == "yours" then
         note = L.Format("Chances come from %s.", ns.Disenchant:YoursPhrase(facts))
     else
-        note = L["These chances come from Classic's numbers. It's an average, so one disenchant can give more or less."]
+        note = L["These are the usual chances. It's an average, so one disenchant can give more or less."]
     end
     note = note .. L.Format(" The buy price is the cheapest listing when last scanned (%s).",
         entry.age and Util.FormatAgeAgo(entry.age) or L["never"])
