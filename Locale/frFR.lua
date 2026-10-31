@@ -2914,7 +2914,7 @@ L["%d for the vendor"] = "%d pour le marchand"
 
 -- Goblin Gold (UI/GoldGoal.lua, Logic/GoldGoal.lua)
 L["Goblin Gold"] = "Or gobelin"
-L["Goblin Gold:"] = "Or gobelin :"
+L["Goblin Gold Sound:"] = "Son de l'or gobelin :"
 L["GOBLIN GOLD"] = "OR GOBELIN"
 L["Gold Tracker:"] = "Compteur d'or :"
 L["Gold Goal:"] = "Objectif d'or :"
