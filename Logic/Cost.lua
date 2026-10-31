@@ -29,7 +29,39 @@ local MAX_SUBCRAFT_DEPTH = 3
 --
 -- @return copper, source  -- source is "vendor", "buy", "mine" (the player's
 --   own price, from the Prices tab) or nil when unknown
+-- @return the item to buy: for a reagent with quality ranks (Retail,
+--   Logic/ReagentRanks.lua), the cheapest rank, since a craft takes any of
+--   them; else the item itself
 function Cost:GetReagentUnitCost(itemID)
+    local ranks = ns.ReagentRanks and ns.ReagentRanks:Of(itemID)
+    if not ranks then
+        local unit, source = self:OneRankUnitCost(itemID)
+        return unit, source, itemID
+    end
+
+    -- The asked-for rank first, so a tie keeps it.
+    local best, bestSource = self:OneRankUnitCost(itemID)
+    local bestID = itemID
+    for _, id in ipairs(ranks) do
+        if id ~= itemID then
+            local unit, source = self:OneRankUnitCost(id)
+            if unit and (not best or unit < best) then
+                best, bestSource, bestID = unit, source, id
+            end
+        end
+    end
+    return best, bestSource, bestID
+end
+
+--- The rank of a reagent that buying would take (GetReagentUnitCost's
+--- third answer), or the item itself.
+function Cost:BuyRank(itemID)
+    local _, _, pick = self:GetReagentUnitCost(itemID)
+    return pick or itemID
+end
+
+--- GetReagentUnitCost for one item alone, whatever other ranks it has.
+function Cost:OneRankUnitCost(itemID)
     -- A price the player set wins (2026-10-06). "use" is the cost,
     -- whoever sells it; "floor" is the least it costs, vendor or auction.
     local mine, mode
@@ -84,8 +116,8 @@ end
 -- @param skip units already bought since the scan (their listings are gone)
 -- @return copper, source  (as GetReagentUnitCost), or nil
 function Cost:GetReagentCost(itemID, count, skip)
-    local unit, source = self:GetReagentUnitCost(itemID)
-    return self:CostOfMany(itemID, count, unit, source, skip), source
+    local unit, source, pick = self:GetReagentUnitCost(itemID)
+    return self:CostOfMany(pick or itemID, count, unit, source, skip), source, pick or itemID
 end
 
 --- GetReagentCost for a unit price and source already looked up.
@@ -110,7 +142,15 @@ function Cost:FindRecipeForItem(itemID)
     if self.recipeByOutput == nil or self.recipeIndexStale then
         self:RebuildOutputIndex()
     end
-    return self.recipeByOutput[itemID]
+    local own = self.recipeByOutput[itemID]
+    if own then return own end
+
+    -- A reagent with quality ranks (Retail): a recipe that makes any rank.
+    local ranks = ns.ReagentRanks and ns.ReagentRanks:Of(itemID)
+    for _, id in ipairs(ranks or {}) do
+        if self.recipeByOutput[id] then return self.recipeByOutput[id] end
+    end
+    return nil
 end
 
 --- Which recipe, known by any character on the account, produces this item.
@@ -471,7 +511,9 @@ function Cost:GetCraftCost(recipeID, depth, visited, opts)
     for _, reagent in ipairs(recipe.reagents or {}) do
         local itemID, quantity = reagent.itemID, reagent.quantity
 
-        local unitCost, source = self:GetReagentUnitCost(itemID)
+        -- `buyID`: the rank bought, the cheapest when it has quality ranks.
+        local unitCost, source, buyID = self:GetReagentUnitCost(itemID)
+        buyID = buyID or itemID
         local crafted = false
         local subCost
         -- The other character who makes it, when it is not made here.
@@ -518,8 +560,9 @@ function Cost:GetCraftCost(recipeID, depth, visited, opts)
         -- Owned, not just carried: the breakdown answers "do I have this",
         -- and bank stock counts. Whether you can craft right now is a separate
         -- question, answered by Profit:GetCraftableCount using bags alone.
-        local inBags = ns.Inventory:GetBagCount(itemID)
-        local have = inBags + ns.Inventory:GetBankCount(itemID)
+        -- Every quality rank counts (Retail): a craft takes any of them.
+        local inBags = ns.Inventory:GetBagCount(itemID, true)
+        local have = inBags + ns.Inventory:GetBankCount(itemID, true)
 
         -- Cash-out-of-pocket view: what is in the bags is already paid for,
         -- but only that many. The rest of the line is still bought or made.
@@ -527,7 +570,7 @@ function Cost:GetCraftCost(recipeID, depth, visited, opts)
         local lineCost = unitCost and (unitCost * (quantity - free)) or nil
         -- Bought, more than one goes up the listings (GetReagentCost).
         if lineCost and (source == "buy" or source == "mine") and quantity - free > 1 then
-            lineCost = self:CostOfMany(itemID, quantity - free, unitCost, source) or lineCost
+            lineCost = self:CostOfMany(buyID, quantity - free, unitCost, source) or lineCost
         end
         if free > 0 and free >= quantity then
             unitCost, source, lineCost = 0, "owned", 0
@@ -535,6 +578,8 @@ function Cost:GetCraftCost(recipeID, depth, visited, opts)
 
         local entry = {
             itemID = itemID,
+            -- The rank bought, when not the one listed first (Retail).
+            buyItemID = (buyID ~= itemID and not crafted) and buyID or nil,
             quantity = quantity,
             unitCost = unitCost,
             lineCost = lineCost,
@@ -620,24 +665,25 @@ function Cost:GetShortfall(recipeID, craftCount)
 
     for _, reagent in ipairs(recipe.reagents or {}) do
         local needed = reagent.quantity * craftCount
-        local have = ns.Inventory:GetOwnedCount(reagent.itemID)
+        local have = ns.Inventory:GetOwnedCount(reagent.itemID, true)
         local short = math.max(0, needed - have)
 
         if short > 0 then
             -- Priced as GetReagentCost prices it: the vendor price for
             -- what a vendor sells, else up the auction listings, lone low
             -- listing aside.
-            local unitCost = self:GetReagentUnitCost(reagent.itemID)
+            local unitCost, _, buyID = self:GetReagentUnitCost(reagent.itemID)
             local estimatedCost = self:GetReagentCost(reagent.itemID, short)
 
             missing[#missing + 1] = {
-                itemID = reagent.itemID,
+                -- The rank to buy: the cheapest, when it has quality ranks.
+                itemID = buyID or reagent.itemID,
                 needed = needed,
                 have = have,
                 shortfall = short,
                 unitCost = unitCost,
                 estimatedCost = estimatedCost,
-                onAlts = ns.Inventory:GetAltTotal(reagent.itemID),
+                onAlts = ns.Inventory:GetAltTotal(reagent.itemID, true),
             }
         end
     end

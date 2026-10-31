@@ -842,9 +842,16 @@ function Recipes:Harvest()
                 local first = slot.reagents and slot.reagents[1]
 
                 if isRequired and first and first.itemID and (slot.quantityRequired or 0) > 0 then
+                    -- Retail: a slot that takes the same reagent at two or
+                    -- three quality ranks lists each one. `itemID` stays the
+                    -- first; `ranks` keeps them all (Logic/ReagentRanks.lua),
+                    -- so every rank counts and the cheapest is bought.
+                    local ranks = ns.ReagentRanks and ns.ReagentRanks.FromSlot(slot)
+                    if ranks and ns.ReagentRanks then ns.ReagentRanks:Note(ranks) end
                     reagents[#reagents + 1] = {
                         itemID = first.itemID,
                         quantity = slot.quantityRequired,
+                        ranks = ranks,
                     }
                 end
             end

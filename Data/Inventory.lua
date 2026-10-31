@@ -21,10 +21,67 @@ local LAST_NORMAL_BAG = tonumber(_G.NUM_BAG_SLOTS) or 4
 
 -- Bank containers. The main bank window is a single pseudo-bag, with the
 -- purchased bank bags after it, and the reagent bank separate again.
-local BANK_CONTAINER = (Enum and Enum.BagIndex and Enum.BagIndex.Bank) or -1
-local REAGENT_BANK = (Enum and Enum.BagIndex and Enum.BagIndex.Reagentbank) or -3
-local FIRST_BANK_BAG = (Enum and Enum.BagIndex and Enum.BagIndex.BankBag_1) or 6
-local LAST_BANK_BAG = FIRST_BANK_BAG + 6
+local BAG_INDEX = (type(Enum) == "table" and type(Enum.BagIndex) == "table" and Enum.BagIndex) or {}
+local function Index(name)
+    local value = BAG_INDEX[name]
+    return type(value) == "number" and value or nil
+end
+local BANK_CONTAINER = Index("Bank") or -1
+local REAGENT_BANK = Index("Reagentbank") or -3
+local FIRST_BANK_BAG = Index("BankBag_1") or 6
+local LAST_BANK_BAG = Index("BankBag_7") or (FIRST_BANK_BAG + 6)
+
+--- The containers the client names `prefix`1 to `prefix``most`, in order.
+local function NamedContainers(prefix, most)
+    local list = {}
+    for index = 1, most do
+        local bag = Index(prefix .. index)
+        if bag then list[#list + 1] = bag end
+    end
+    return list
+end
+
+-- Retail (since The War Within) keeps the bank in tabs: the character's own
+-- (CharacterBankTab_1 to 6) and the Warband bank every character on the
+-- account shares (AccountBankTab_1 to 5). The Warband bank is the account's,
+-- so it is counted once, apart from any character's bank (GetWarbandCount
+-- below). Its tabs sit where the old layout guessed bank bags were, so the
+-- old range is used only when the client names no bank tabs.
+local CHARACTER_TABS = NamedContainers("CharacterBankTab_", 6)
+local WARBAND_TABS = NamedContainers("AccountBankTab_", 5)
+
+local warbandBag = {}
+for _, bag in ipairs(WARBAND_TABS) do warbandBag[bag] = true end
+
+--- This character's bank containers, never the Warband bank's.
+local function CharacterBankContainers()
+    local list = { BANK_CONTAINER, REAGENT_BANK }
+    if #CHARACTER_TABS > 0 then
+        for _, bag in ipairs(CHARACTER_TABS) do list[#list + 1] = bag end
+    else
+        for bag = FIRST_BANK_BAG, LAST_BANK_BAG do
+            if not warbandBag[bag] then list[#list + 1] = bag end
+        end
+    end
+    return list
+end
+
+local characterBankBag = {}
+for _, bag in ipairs(CharacterBankContainers()) do characterBankBag[bag] = true end
+
+--- Every rank of a reagent, when `anyRank` asks and it has more than one
+--- (Logic/ReagentRanks.lua), else nil.
+local function RanksOf(itemID, anyRank)
+    if not anyRank or not ns.ReagentRanks then return nil end
+    return ns.ReagentRanks:Of(itemID)
+end
+
+--- `fn(self, id)` added up over every rank of a reagent.
+local function SumRanks(self, ranks, fn)
+    local total = 0
+    for _, id in ipairs(ranks) do total = total + (fn(self, id) or 0) end
+    return total
+end
 
 -- Worn equipment, the character's bag slots included. Nothing here is stock.
 local FIRST_EQUIPPED_SLOT = 1
@@ -113,12 +170,13 @@ end
 -- The count is not simply "in your bags": a bag the character is wearing is
 -- counted as one of that bag, which is the whole reason the walk below exists.
 -- @return count, or nil when the client cannot answer
-local function ClientCount(itemID, includeBank)
+local function ClientCount(itemID, includeBank, includeWarband)
     if not itemID then return nil end
     if not Util.HasFunction("C_Item.GetItemCount") then return nil end
 
     local ok, count = pcall(C_Item.GetItemCount, itemID,
-        includeBank and true or false, false, includeBank and true or false)
+        includeBank and true or false, false, includeBank and true or false,
+        includeWarband and true or false)
 
     if ok and count then return count end
     return nil
@@ -179,8 +237,13 @@ end
 --
 -- Equipped things are not stock, and the containers are the one place that
 -- cannot be confused about which is which.
-function Inventory:GetBagCount(itemID)
+--
+-- `anyRank` counts every quality rank of a reagent (Retail), as a craft
+-- can use any of them. Left out, the item alone, as selling needs.
+function Inventory:GetBagCount(itemID, anyRank)
     if not itemID then return 0 end
+    local ranks = RanksOf(itemID, anyRank)
+    if ranks then return SumRanks(self, ranks, self.GetBagCount) end
     return self:GetBagCounts()[itemID] or 0
 end
 
@@ -228,14 +291,17 @@ end
 --
 -- Asked through Mail so the "count mail as stock" setting is honoured in one
 -- place, and so this still answers 0 before Mail has loaded.
-function Inventory:GetMailCount(itemID)
+function Inventory:GetMailCount(itemID, anyRank)
     if not ns.Mail then return 0 end
+    local ranks = RanksOf(itemID, anyRank)
+    if ranks then return SumRanks(self, ranks, self.GetMailCount) end
     return ns.Mail:GetCount(itemID)
 end
 
 --- Bags plus bank and reagent bank.
-function Inventory:GetTotalCount(itemID)
-    return self:GetBagCount(itemID) + self:GetBankCount(itemID) + self:GetMailCount(itemID)
+function Inventory:GetTotalCount(itemID, anyRank)
+    return self:GetBagCount(itemID, anyRank) + self:GetBankCount(itemID, anyRank)
+        + self:GetMailCount(itemID, anyRank)
 end
 
 --- How many are sitting in the bank.
@@ -243,7 +309,19 @@ end
 -- The client's own count is preferred, but it can under-report when the bank
 -- has not been opened this session, so a cached snapshot taken the last time
 -- you visited a bank is used as a floor.
-function Inventory:GetBankCount(itemID)
+--
+-- The Warband bank (Retail) is in it too, once: every character can take
+-- from it at any banker. It is counted here for the character playing only,
+-- never in a saved character's bank, so the account's stock is never
+-- counted again on each alt.
+function Inventory:GetBankCount(itemID, anyRank)
+    local ranks = RanksOf(itemID, anyRank)
+    if ranks then return SumRanks(self, ranks, self.GetBankCount) end
+    return self:GetCharacterBankCount(itemID) + self:GetWarbandCount(itemID)
+end
+
+--- This character's own bank, never the Warband bank.
+function Inventory:GetCharacterBankCount(itemID)
     -- Both halves come from the client, on purpose. Whatever it miscounts --
     -- worn bags, anything else -- appears in both and cancels, leaving the
     -- difference the bank made. Mixing the walked bag count in here instead
@@ -262,6 +340,23 @@ function Inventory:GetBankCount(itemID)
     return math.max(live, cached)
 end
 
+--- How many sit in the Warband bank, the account's own (Retail), or 0 on a
+--- client without one. As the bank: the client's count, with the snapshot
+--- from the last visit to a bank as a floor.
+function Inventory:GetWarbandCount(itemID)
+    if not itemID or #WARBAND_TABS == 0 then return 0 end
+
+    local live = 0
+    local withWarband = ClientCount(itemID, false, true)
+    local without = ClientCount(itemID, false, false)
+    if withWarband and without then live = math.max(0, withWarband - without) end
+
+    local saved = ns.db and type(ns.db.warbandBank) == "table" and ns.db.warbandBank
+    local cached = saved and tonumber(saved[itemID]) or 0
+
+    return math.max(live, cached)
+end
+
 --- Everything this character owns: bags, bank and mailbox.
 --
 -- This is the right number for "do I need to buy this", because you already
@@ -272,8 +367,9 @@ end
 -- and an item halfway home is still an item you own. Leaving it out meant the
 -- Profit tab recommended crafting replacements for things that had not
 -- actually sold.
-function Inventory:GetOwnedCount(itemID)
-    return self:GetBagCount(itemID) + self:GetBankCount(itemID) + self:GetMailCount(itemID)
+function Inventory:GetOwnedCount(itemID, anyRank)
+    return self:GetBagCount(itemID, anyRank) + self:GetBankCount(itemID, anyRank)
+        + self:GetMailCount(itemID, anyRank)
 end
 
 --------------------------------------------------------------------------------
@@ -318,14 +414,30 @@ function Inventory:SnapshotBank()
     local record = GetRecord(true)
     if not record then return end
 
-    local counts = {}
+    local counts, sawAnything = self:CountContainers(CharacterBankContainers())
 
-    local containers = { BANK_CONTAINER, REAGENT_BANK }
-    for bag = FIRST_BANK_BAG, LAST_BANK_BAG do
-        containers[#containers + 1] = bag
+    -- Only overwrite when the bank was genuinely readable. Otherwise an empty
+    -- read would wipe a good snapshot and silently tell you to buy things you
+    -- already own.
+    if sawAnything then
+        record.bank = counts
+        record.bankAt = time()
+
+        -- Distinct from bankAt, which persists: this tracks whether the bank
+        -- has been opened since logging in. A snapshot from last week is better
+        -- than nothing, but the player should know it is not current.
+        self.readThisSession = true
     end
 
-    local sawAnything = false
+    self:SnapshotWarband()
+
+    return counts
+end
+
+--- Everything in a list of containers, counted, and whether any of them
+--- could be read at all (a shut bank reads as no slots).
+function Inventory:CountContainers(containers)
+    local counts, sawAnything = {}, false
 
     for _, bag in ipairs(containers) do
         local slotsOk, slots = pcall(C_Container.GetContainerNumSlots, bag)
@@ -342,19 +454,22 @@ function Inventory:SnapshotBank()
         end
     end
 
-    -- Only overwrite when the bank was genuinely readable. Otherwise an empty
-    -- read would wipe a good snapshot and silently tell you to buy things you
-    -- already own.
-    if sawAnything then
-        record.bank = counts
-        record.bankAt = time()
+    return counts, sawAnything
+end
 
-        -- Distinct from bankAt, which persists: this tracks whether the bank
-        -- has been opened since logging in. A snapshot from last week is better
-        -- than nothing, but the player should know it is not current.
-        self.readThisSession = true
-    end
+--- Record the Warband bank, account wide, while a bank is open (Retail).
+--
+-- Kept in `warbandBank` (never rename it, nor `warbandBankAt`) in the
+-- account save, never on a character, so it is counted once whoever plays.
+-- Only a read that saw a tab replaces it, as for the bank.
+function Inventory:SnapshotWarband()
+    if #WARBAND_TABS == 0 or not ns.db then return nil end
 
+    local counts, sawAnything = self:CountContainers(WARBAND_TABS)
+    if not sawAnything then return nil end
+
+    ns.db.warbandBank = counts
+    ns.db.warbandBankAt = time()
     return counts
 end
 
@@ -374,7 +489,14 @@ end
 --
 -- Live for the logged-in character; the cached snapshot for anyone else, which
 -- is only as fresh as the last time they logged out.
-function Inventory:GetCharacterBagCount(characterKey, itemID)
+function Inventory:GetCharacterBagCount(characterKey, itemID, anyRank)
+    local ranks = RanksOf(itemID, anyRank)
+    if ranks then
+        local total = 0
+        for _, id in ipairs(ranks) do total = total + self:GetCharacterBagCount(characterKey, id) end
+        return total
+    end
+
     if not characterKey or characterKey == ns.Config:GetCharacterKey() then
         return self:GetBagCount(itemID)
     end
@@ -388,9 +510,19 @@ end
 --- Cached counts held by other characters, as { characterKey = count }.
 -- Never merged into the local count: "you have 40, but 30 are on an alt" is a
 -- materially different situation from "you have 40".
-function Inventory:GetAltCounts(itemID)
+function Inventory:GetAltCounts(itemID, anyRank)
     local results = {}
     if not ns.db then return results end
+
+    local ranks = RanksOf(itemID, anyRank)
+    if ranks then
+        for _, id in ipairs(ranks) do
+            for characterKey, count in pairs(self:GetAltCounts(id)) do
+                results[characterKey] = (results[characterKey] or 0) + count
+            end
+        end
+        return results
+    end
 
     local selfKey = ns.Config:GetCharacterKey()
 
@@ -408,9 +540,9 @@ function Inventory:GetAltCounts(itemID)
     return results
 end
 
-function Inventory:GetAltTotal(itemID)
+function Inventory:GetAltTotal(itemID, anyRank)
     local total = 0
-    for _, count in pairs(self:GetAltCounts(itemID)) do
+    for _, count in pairs(self:GetAltCounts(itemID, anyRank)) do
         total = total + count
     end
     return total
@@ -496,11 +628,16 @@ end
 --- Is this container one of the bank's?
 local function IsBankContainer(bag)
     if type(bag) ~= "number" then return false end
-    if bag == BANK_CONTAINER or bag == REAGENT_BANK then return true end
-    return bag >= FIRST_BANK_BAG and bag <= LAST_BANK_BAG
+    return characterBankBag[bag] == true
+end
+
+--- Is this container one of the Warband bank's tabs (Retail)?
+local function IsWarbandContainer(bag)
+    return type(bag) == "number" and warbandBag[bag] == true
 end
 
 Inventory.IsBankContainer = IsBankContainer
+Inventory.IsWarbandContainer = IsWarbandContainer
 
 --- Bags changed, so the walk is stale.
 --
@@ -519,7 +656,8 @@ function Inventory:OnBagChanged(event, bag)
     -- Counted, so a list built from the bags can tell nothing moved.
     self.changes = (self.changes or 0) + 1
 
-    if event == "BAG_UPDATE" and self.bankOpen and IsBankContainer(bag) then
+    if event == "BAG_UPDATE" and self.bankOpen
+        and (IsBankContainer(bag) or IsWarbandContainer(bag)) then
         self:ReadBankSoon()
     end
 end
