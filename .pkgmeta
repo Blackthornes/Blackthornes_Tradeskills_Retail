@@ -42,6 +42,16 @@ ignore:
   - UI/DealsFavor.lua
   - UI/DealsWrits.lua
   - UI/Tab_Deals.lua
+  # Classic data and Road to 300, which do not fit Retail. Learn next and
+  # disenchanting learn from the game there instead.
+  - Data/VendorPrices.lua
+  - Data/VendorSpots.lua
+  - Data/RecipeBook.lua
+  - Data/LearnSpots.lua
+  - Logic/RoadPlan.lua
+  - Logic/Welcome.lua
+  - UI/RoadView.lua
+  - UI/Welcome.lua
 
 # Ship CHANGELOG.md as written. Without this the packager writes its own from
 # the full commit history, which is the private repository's development log

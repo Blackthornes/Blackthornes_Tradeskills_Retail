@@ -35,6 +35,15 @@ local RETAIL_LEFT_OUT = {
     ["UI/DealsFavor.lua"] = true,
     ["UI/DealsWrits.lua"] = true,
     ["UI/Tab_Deals.lua"] = true,
+    -- Classic data and Road to 300 (Learn next learns from the game here).
+    ["Data/VendorPrices.lua"] = true,
+    ["Data/VendorSpots.lua"] = true,
+    ["Data/RecipeBook.lua"] = true,
+    ["Data/LearnSpots.lua"] = true,
+    ["Logic/RoadPlan.lua"] = true,
+    ["Logic/Welcome.lua"] = true,
+    ["UI/RoadView.lua"] = true,
+    ["UI/Welcome.lua"] = true,
 }
 
 local passed, failed = 0, 0

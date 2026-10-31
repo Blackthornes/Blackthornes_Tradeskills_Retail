@@ -111,6 +111,8 @@ local function Enchanter(level)
 end
 
 assert(loadfile(lfs_cwd .. "/Logic/Disenchant.lua"))("Blackthornes_TS", ns)
+-- Forever's built-in table (Retail uses your own breaks only).
+ns.Disenchant.OWN_RESULTS_ONLY = false
 
 local Disenchant = ns.Disenchant
 

@@ -12,6 +12,9 @@
 -- A trainer or vendor stands where the game saw it, when its window has
 -- been opened or the shipped Forever spots have it (VendorPins:SeenAt),
 -- else at Classic's spot.
+-- On Retail there are no shipped spots (the Retail TOC leaves out
+-- Data/LearnSpots.lua): the trainers and vendors the game showed teach it,
+-- with the skill and price their windows gave (Logic/RecipeSources.lua).
 -- Show the way aims the arrow at them (Logic/WayArrow.lua), or, where the
 -- arrow can't find the map, puts the game's own map pin on them, or
 -- TomTom's arrow when TomTom is installed (Logic/Waypoints.lua).
@@ -112,6 +115,13 @@ function LearnNext:Place(record)
     local side = Side()
     local spots = Spots()
 
+    -- Retail ships no Classic spots: the trainers and vendors the game
+    -- showed (Logic/RecipeSources.lua).
+    if not ns.LEARN_SPOTS and ns.RecipeSources and ns.RecipeSources.Place then
+        local ok, place = pcall(ns.RecipeSources.Place, ns.RecipeSources, record, side)
+        return ok and place or nil
+    end
+
     local trainers, sideTop = {}, nil
     if record.trainerCost then
         local line = ns.RecipeBook.ClassicLine and ns.RecipeBook.ClassicLine(record.skillLineID)
@@ -184,6 +194,8 @@ end
 --- yellow and grey; "unknown" when they are not known.
 function LearnNext.Tier(record, skill)
     local yellow, grey = record.yellow, record.grey
+    -- Retail's window says only when a recipe not learned goes grey.
+    if grey and skill and not yellow and skill >= grey then return "trivial" end
     if not (yellow and grey and skill) then return "unknown" end
     if skill >= grey then return "trivial" end
     if skill < yellow then return "optimal" end
@@ -380,7 +392,7 @@ function LearnNext:ShowTheWay(row)
 
     if ok then
         ns.Print(L.Format("Pinned %s (%s) on your map, %s %s, %s.", who, what,
-            place.zone, place.x, place.y))
+            place.zone or "", place.x or 0, place.y or 0))
     elseif place.zone then
         ns.Print(L.Format("Can't pin %s (%s): %s. They are in %s.", who, what,
             WHY[why] or L["no exact spot is known for them"], place.zone))

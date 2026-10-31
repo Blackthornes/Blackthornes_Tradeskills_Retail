@@ -159,7 +159,7 @@ local function BuildList()
     local materials
     if state.enchantingOnly and ns.Disenchant and ns.Disenchant.MATERIALS then
         materials = {}
-        for _, material in ipairs(ns.Disenchant.MATERIALS) do
+        for _, material in ipairs(ns.Disenchant.Materials and ns.Disenchant:Materials() or ns.Disenchant.MATERIALS) do
             materials[material.itemID] = material.name or true
             if wantNames and type(material.name) == "string" and not stored[material.itemID] then
                 stored[material.itemID] = material.name

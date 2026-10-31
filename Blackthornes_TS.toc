@@ -41,10 +41,6 @@ Data\Recipes.lua
 Data\Inventory.lua
 Data\Mail.lua
 Data\Auctions.lua
-Data\VendorPrices.lua
-Data\VendorSpots.lua
-Data\RecipeBook.lua
-Data\LearnSpots.lua
 Data\Vendor.lua
 
 Logic\ReagentRanks.lua
@@ -58,13 +54,12 @@ Logic\CraftOrFarm.lua
 Logic\Shuffle.lua
 Logic\LevelUp.lua
 Logic\RecipeBook.lua
+Logic\RecipeSources.lua
 Logic\Waypoints.lua
 Logic\TomTom.lua
 Logic\WayArrow.lua
 Logic\VendorPins.lua
 Logic\LearnNext.lua
-Logic\RoadPlan.lua
-Logic\Welcome.lua
 Logic\Queue.lua
 Logic\QueueActions.lua
 Logic\QueueMail.lua
@@ -153,9 +148,7 @@ UI\RecipeBookView.lua
 UI\YourTimeView.lua
 UI\ShuffleView.lua
 UI\Tab_Profit.lua
-UI\RoadView.lua
 UI\Tab_LevelUp.lua
-UI\Welcome.lua
 UI\Tab_Disenchanting.lua
 UI\Tab_Queue.lua
 UI\Tab_Gather.lua

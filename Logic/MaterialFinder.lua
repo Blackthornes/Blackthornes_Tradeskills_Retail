@@ -371,7 +371,8 @@ end
 --- The material the view opens on: the highest one your disenchants have
 --- given you, else Strange Dust.
 function MaterialFinder:FirstPick()
-    local materials = ns.Disenchant and ns.Disenchant.MATERIALS or {}
+    local Disenchant = ns.Disenchant
+    local materials = Disenchant and (Disenchant.Materials and Disenchant:Materials() or Disenchant.MATERIALS) or {}
     local log = ns.DisenchantLog
     local items = log and log.GetTable and log:GetTable().items or {}
 

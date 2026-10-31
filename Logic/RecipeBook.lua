@@ -158,6 +158,11 @@ function RecipeBook:NoteSeen(recipeID, data)
     }
 
     self.merged = nil
+
+    -- Retail: when a recipe not learned goes grey (Logic/RecipeSources.lua).
+    if data.learned == false and ns.RecipeSources and ns.RecipeSources.NoteUnlearned then
+        pcall(ns.RecipeSources.NoteUnlearned, ns.RecipeSources, recipeID)
+    end
 end
 
 --------------------------------------------------------------------------------
@@ -256,6 +261,12 @@ function RecipeBook:GetAll()
             end
             record.seenInGame = true
         end
+    end
+
+    -- Retail: what trainer and vendor windows showed (Logic/RecipeSources.lua).
+    if ns.RecipeSources and ns.RecipeSources.LayOver then
+        local laid, why = pcall(ns.RecipeSources.LayOver, ns.RecipeSources, merged)
+        if not laid and ns.Debug then ns.Debug("recipe sources:", tostring(why)) end
     end
 
     -- The skill each recipe needs on Forever: the Forever client's own
@@ -462,6 +473,9 @@ local function BookProfession(name)
             end
         end
     end
+    -- Retail ships no book (its TOC leaves Data/RecipeBook.lua out), so the
+    -- tooltip's own name stands ("Khaz Algar Blacksmithing").
+    if not next(Book().PROFESSIONS) then return name end
     return nil
 end
 
@@ -671,11 +685,20 @@ end
 local function VendorsOf(itemID)
     local row = Book().ITEMS[itemID]
     local list = row and row.v
+    -- Retail: the vendors the game showed selling it (Logic/RecipeSources.lua).
+    if not list and ns.RecipeSources then
+        local ok, found = pcall(ns.RecipeSources.VendorsOf, ns.RecipeSources, itemID, PlayerFaction())
+        local vendors = {}
+        for _, vendor in ipairs(ok and type(found) == "table" and found or {}) do
+            vendors[#vendors + 1] = { name = vendor.name, zone = vendor.zone or "" }
+        end
+        return vendors
+    end
     if not list then return {} end
 
     local side = PlayerFaction()
     local vendors = {}
-    for i = 1, #list - 2, 3 do
+    for i = 1, list and #list - 2 or 0, 3 do
         local fac = list[i + 2] or ""
         if not side or fac == "" or fac:find(side, 1, true) then
             vendors[#vendors + 1] = { name = list[i], zone = list[i + 1] }
