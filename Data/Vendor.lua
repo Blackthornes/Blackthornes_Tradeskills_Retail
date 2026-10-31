@@ -284,6 +284,8 @@ function Vendor:Scan()
 
     -- Where this vendor stands and what it sells, for the vendor map pins.
     if ns.VendorPins then pcall(ns.VendorPins.Learn, ns.VendorPins, self.merchantItems) end
+    -- Retail: the recipe items it sells, for Learn next (Logic/RecipeSources.lua).
+    if ns.RecipeSources then pcall(ns.RecipeSources.FromVendor, ns.RecipeSources, self.merchantItems) end
 
     self.lastUnresolved = unresolved
     return learned

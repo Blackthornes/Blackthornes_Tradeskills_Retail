@@ -1439,12 +1439,15 @@ local function Build(outer)
 
     -- The Welcome card (2026-10-20): which professions' roads come first on
     -- the Level Up tab's Road to 300. Opens the card again.
-    local roadRow = CreateRow(pages.look, 1, L["Road to 300:"])
-    local roadOpen = Widgets.CreateButton(roadRow, L["Open"], function()
-        if ns.WelcomeUI then ns.WelcomeUI:Show() end
-    end, { width = 60, height = 20 })
-    roadOpen:SetPoint("TOPLEFT", CONTROL_X, -2)
-    FitButton(roadOpen)
+    -- Only where it is loaded: the Retail TOC leaves Road to 300 out.
+    if ns.WelcomeUI then
+        local roadRow = CreateRow(pages.look, 1, L["Road to 300:"])
+        local roadOpen = Widgets.CreateButton(roadRow, L["Open"], function()
+            if ns.WelcomeUI then ns.WelcomeUI:Show() end
+        end, { width = 60, height = 20 })
+        roadOpen:SetPoint("TOPLEFT", CONTROL_X, -2)
+        FitButton(roadOpen)
+    end
 
     local shopsRow = CreateRow(pages.auction, 1, L["Open With AH and Vendors:"],
         L["Opens this window with the auction house or a vendor."])

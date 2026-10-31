@@ -184,7 +184,8 @@ function RecipeSources:FromVendor(items)
     local vendors, kept = self:Store().vendors, 0
     for itemID, sold in pairs(items) do
         if type(itemID) == "number" and type(sold) == "table" and not sold.extendedCost then
-            local classID = select(6, Read(item.GetItemInfoInstant, itemID))
+            local got, classID = pcall(function() return select(6, item.GetItemInfoInstant(itemID)) end)
+            classID = got and classID or nil
             if classID == CLASS_RECIPE then
                 local taught = RecipeSources.Teaches(Plain(Read(item.GetItemInfo, itemID)))
                 local record = vendors[itemID]

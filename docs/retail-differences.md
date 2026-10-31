@@ -260,17 +260,61 @@ players.
 them. A Forever reader that counts a reagent passes `anyRank`; one that
 buys one uses `Cost:BuyRank`.
 
+## 3d. Learn next and disenchanting from the game (port plan step 7)
+
+`Blackthornes_TS.toc`, `.pkgmeta`, `tools/test_retail.lua`,
+`Logic/RecipeSources.lua` (Retail only), `Logic/RecipeBook.lua`,
+`Logic/LearnNext.lua`, `Data/Vendor.lua`, `Logic/Disenchant.lua`,
+`Logic/DisenchantLog.lua`, `Logic/MaterialFinder.lua`,
+`UI/Tab_Disenchanting.lua`, `UI/Tab_Prices.lua`, `UI/Tab_Settings.lua`,
+the five locale files (four new lines), `tools/test_retaillearn.lua`, and
+one line in each of `tools/test_delog.lua`, `test_disenchant.lua`,
+`test_disenchantdeals.lua` and `test_disenchantrows.lua`
+(`ns.Disenchant.OWN_RESULTS_ONLY = false`, so they keep testing Forever's
+table). PR: "Learn next and disenchanting from Retail's own data"
+(2026-10-31).
+
+- Not in the TOC, and in `.pkgmeta`'s ignore list: Classic's recipe book
+  (`Data/RecipeBook.lua`), Learn next's spots (`Data/LearnSpots.lua`),
+  Classic vendor prices and spots (`Data/VendorPrices.lua`,
+  `Data/VendorSpots.lua`), and Road to 300 with its Welcome card
+  (`Logic/RoadPlan.lua`, `Logic/Welcome.lua`, `UI/RoadView.lua`,
+  `UI/Welcome.lua`). The Level Up tab's switch already left Road to 300 out
+  without `ns.RoadView`; the "Road to 300:" Settings row now shows only
+  `if ns.WelcomeUI`. A Retail road to max is its own job.
+- `Logic/RecipeSources.lua` (Retail only) learns where recipes are learned
+  from what the game shows: a trainer's window (each line's skill and
+  price), a vendor's window (recipe items it sells, called from
+  `Vendor:Scan`) and, for a recipe the profession window shows not learned,
+  when it goes grey (`maxTrivialLevel`, from `RecipeBook:NoteSeen`). Saved
+  account wide as `recipeSources` (never rename it). `RecipeBook:GetAll`
+  lays it over the recipes seen (`LayOver`), `VendorsOf` reads its vendors
+  when the book has none, `BookProfession` keeps the tooltip's own name
+  when there is no book, and `LearnNext:Place` asks `RecipeSources:Place`
+  when `ns.LEARN_SPOTS` is not loaded. `LearnNext.Tier` reads a grey with
+  no yellow.
+- `Disenchant.OWN_RESULTS_ONLY = true`: no built-in chances and no
+  Enchanting skill named. Results pool by quality and the item's expansion
+  (`Disenchant.RetailKey`, item facts now keep `x`, the expansion; an item
+  read before is read once more), and an item has no value until 10 of
+  items like it, or 3 of it, were broken. Any enchanting trade good (item
+  class 7, subclass 12) counts as a material, and `Disenchant:Materials()`
+  adds the ones your breaks gave to Classic's list for the pickers.
+  `DescribeKey` names the group by the client's expansion name. New lines:
+  "Item level %d %s weapon.", "Item level %d %s armor.", "Break a few of
+  these to learn what they give." and "your recorded disenchants are
+  cleared".
+
+**Sync rule: Blend.** Keep the TOC lines, the `RecipeSources` hooks and
+the `OWN_RESULTS_ONLY` checks; take Forever's other changes. A Forever
+change to the left-out data files is **Forever only**.
+
 ## 4. Still Forever's, for later steps
 
 Not changed in the copy, on purpose (no new player features yet). Each is
 its own step in the port plan, on the owner's yes:
 
-- Classic data that may not fit Retail: the recipe book
-  (`Data/RecipeBook.lua`), Learn next's trainer and vendor spots
-  (`Data/LearnSpots.lua`, `Data/VendorSpots.lua`), vendor prices
-  (`Data/VendorPrices.lua`), Road to 300 and its Welcome card
-  (`Logic/RoadPlan.lua`, `Logic/Welcome.lua`, `UI/RoadView.lua`,
-  `UI/Welcome.lua`), Classic disenchant results. They still load.
+- A Retail road to max (Road to 300's Retail form), on the owner's yes.
 - The release workflow (`.github/workflows/release.yml`) is Forever's. It
   runs only on a `vX.Y.Z` tag, which the owner pushes, and uploads only with
   the `CF_API_KEY` secret. The Discord steps do nothing without their
