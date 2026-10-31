@@ -1,6 +1,7 @@
 # Blackthornes_Tradeskills
 
-Tradeskill addon for WoW: Forever. It works out which crafts are worth making,
+Tradeskill addon for Retail WoW, copied from the WoW: Forever addon with its
+history (see `docs/retail-differences.md`). It works out which crafts are worth making,
 scans the auction house for the prices that answer depends on, and manages a
 craft queue, a shopping list and a posting list around it.
 
@@ -73,7 +74,8 @@ Releases are cut by pushing a tag like `v0.2.0`.
 4. checks that zip is clear to post (`tools/check_package.py`): only the
    addon's own files, and nothing that looks private, such as a Windows path,
    an email address, a saved-variables dump or a token;
-5. only then uploads that same zip to CurseForge (project 1710638) and
+5. only then uploads that same zip to CurseForge (project 1776347, the Retail
+   project; never 1710638, the Forever one) and
    attaches it to a GitHub release.
 
 To release from GitHub Desktop: add the new version's section to the top of

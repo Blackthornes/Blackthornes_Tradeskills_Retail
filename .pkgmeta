@@ -23,6 +23,25 @@ ignore:
   # The #general Discord posts; tools/post_general.py checks and posts them.
   - NEWS.md
   - README.md
+  # Forever-only features and Classic travel routes that the Retail TOC
+  # never loads. They stay in the repo so Forever changes merge cleanly.
+  - Data/ForeverVendorSpots.lua
+  - Data/ForeverRecipes.lua
+  - Data/WaylaidCrates.lua
+  - Data/CraftsmansWrits.lua
+  - Data/Travel.lua
+  - Data/TravelZones.lua
+  - Logic/Legacy.lua
+  - Logic/Travel.lua
+  - Logic/MerchantsFavor.lua
+  - Logic/Writs.lua
+  - Logic/Contribute.lua
+  - UI/FavorsView.lua
+  - UI/TravelCard.lua
+  - UI/TravelMap.lua
+  - UI/DealsFavor.lua
+  - UI/DealsWrits.lua
+  - UI/Tab_Deals.lua
 
 # Ship CHANGELOG.md as written. Without this the packager writes its own from
 # the full commit history, which is the private repository's development log

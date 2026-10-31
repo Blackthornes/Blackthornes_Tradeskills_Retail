@@ -1353,9 +1353,13 @@ local function Build(outer)
     widgets.disenchantTooltips = ShiftDropdown(disenchantTipRow, "disenchant", "tooltipDisenchantResults")
 
     -- Asked 2026-10-20: what a Waylaid Crate costs to fill, on its tooltip.
-    local crateTipRow = CreateRow(pages.look, 1, L["Crate Costs:"])
+    -- Merchant's Favor is Forever's own, so Retail, which leaves it out,
+    -- shows no row.
+    if ns.MerchantsFavor then
+        local crateTipRow = CreateRow(pages.look, 1, L["Crate Costs:"])
 
-    widgets.crateTooltips = ShiftDropdown(crateTipRow, "crate", "tooltipCrateCosts")
+        widgets.crateTooltips = ShiftDropdown(crateTipRow, "crate", "tooltipCrateCosts")
+    end
 
     -- Its own row (a player's report, 2026-10-09): beside the tick box it
     -- started 340 pixels in and ran past the column into the next one.
@@ -1682,12 +1686,16 @@ local function Build(outer)
 
     -- Show the way to a trainer or vendor far away step by step
     -- (Logic/Travel.lua, the same in every addon). On unless unticked.
-    local guideRow = CreateRow(pages.look, 2, L["Guide Me:"],
-        L["When the place is in another zone or across the sea, the arrow leads you there step by step."])
-    widgets.arrowRoute = Widgets.CreateCheckbox(guideRow, L["On"], function(checked)
-        if ns.Travel then ns.Travel:SetOn(checked) end
-    end, true)
-    widgets.arrowRoute:SetPoint("TOPLEFT", CONTROL_X, -2)
+    -- Retail leaves Travel out (its routes are the Classic world's), so the
+    -- row shows only where it is loaded.
+    if ns.Travel then
+        local guideRow = CreateRow(pages.look, 2, L["Guide Me:"],
+            L["When the place is in another zone or across the sea, the arrow leads you there step by step."])
+        widgets.arrowRoute = Widgets.CreateCheckbox(guideRow, L["On"], function(checked)
+            if ns.Travel then ns.Travel:SetOn(checked) end
+        end, true)
+        widgets.arrowRoute:SetPoint("TOPLEFT", CONTROL_X, -2)
+    end
 
     -- How big the whole arrow is drawn, 100% unless picked (the owner,
     -- 2026-10-26). The arrow keeps its spot.
@@ -2357,7 +2365,7 @@ local function Refresh()
     ShowShiftMode(widgets.recipeTooltips)
     ShowShiftMode(widgets.enchantTooltips)
     ShowShiftMode(widgets.disenchantTooltips)
-    ShowShiftMode(widgets.crateTooltips)
+    if widgets.crateTooltips then ShowShiftMode(widgets.crateTooltips) end
     widgets.openWithShops:SetChecked(Config:Get("openWithShops") == true)
     widgets.effects:SetValue(ns.Motion and ns.Motion.Level() or "full")
     local textSize = Config:Get("textSize")
@@ -2395,7 +2403,9 @@ local function Refresh()
     widgets.cooldownAlerts:SetChecked(Config:Get("cooldownAlerts") ~= false)
     widgets.tradeRequests:SetChecked(Config:Get("tradeRequests") == true)
     widgets.vendorMapPins:SetChecked(Config:Get("vendorMapPins") == true)
-    widgets.arrowRoute:SetChecked(type(ns.db) == "table" and ns.db.arrowRoute ~= false)
+    if widgets.arrowRoute then
+        widgets.arrowRoute:SetChecked(type(ns.db) == "table" and ns.db.arrowRoute ~= false)
+    end
     widgets.useTomTom:SetChecked(type(ns.db) ~= "table" or ns.db.useTomTom ~= false)
     widgets.arrowSize:SetValue(ns.WayArrowUI and ns.WayArrowUI.Size() or 100, true)
     widgets.goldTracker:SetChecked(Config:Get("goldTracker") == true)

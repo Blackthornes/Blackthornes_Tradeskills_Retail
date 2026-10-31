@@ -1,6 +1,6 @@
-## Interface: 16001
+## Interface: 120105
 ## Title: Blackthornes Tradeskills
-## Notes: Finds profitable crafts, scans the auction house and keeps a craft queue, for WoW: Forever.
+## Notes: Finds profitable crafts, scans the auction house and keeps a craft queue.
 ## Author: Blackthornes
 ## Version: @project-version@
 ## SavedVariables: BlackthornesTSDB
@@ -9,7 +9,9 @@
 ## IconTexture: Interface\Icons\Trade_BlackSmithing
 
 # Where tagged releases upload. The packager reads this; the client ignores it.
-## X-Curse-Project-ID: 1710638
+# This is the Retail copy, with its own CurseForge project. Never put the
+# Forever project's ID (1710638) here, or a tag would upload Retail to it.
+## X-Curse-Project-ID: 1776347
 
 Locale\Locale.lua
 Locale\deDE.lua
@@ -41,17 +43,10 @@ Data\Mail.lua
 Data\Auctions.lua
 Data\VendorPrices.lua
 Data\VendorSpots.lua
-Data\ForeverVendorSpots.lua
 Data\RecipeBook.lua
-Data\ForeverRecipes.lua
 Data\LearnSpots.lua
 Data\Vendor.lua
-Data\WaylaidCrates.lua
-Data\CraftsmansWrits.lua
-Data\Travel.lua
-Data\TravelZones.lua
 
-Logic\Legacy.lua
 Logic\Cost.lua
 Logic\CraftTime.lua
 Logic\Disenchant.lua
@@ -63,7 +58,6 @@ Logic\Shuffle.lua
 Logic\LevelUp.lua
 Logic\RecipeBook.lua
 Logic\Waypoints.lua
-Logic\Travel.lua
 Logic\TomTom.lua
 Logic\WayArrow.lua
 Logic\VendorPins.lua
@@ -92,8 +86,6 @@ Logic\MailHaul.lua
 Logic\Demand.lua
 Logic\FarmerGoals.lua
 Logic\VendorFlips.lua
-Logic\MerchantsFavor.lua
-Logic\Writs.lua
 Logic\Banks.lua
 Logic\Upgrades.lua
 Logic\KeepHere.lua
@@ -103,7 +95,6 @@ Logic\AccountLink.lua
 Logic\GuildPrices.lua
 Logic\GuildCrafters.lua
 Logic\RealmPrices.lua
-Logic\Contribute.lua
 Logic\TSMPrices.lua
 Logic\AuctionatorPrices.lua
 Logic\Cooldowns.lua
@@ -143,7 +134,6 @@ UI\KeepBox.lua
 UI\NeverMakeBox.lua
 UI\BuyQuantity.lua
 UI\AuctionsView.lua
-UI\FavorsView.lua
 UI\CraftPanel.lua
 UI\ProfessionOpener.lua
 UI\Disenchanter.lua
@@ -155,8 +145,6 @@ UI\ItemTooltip.lua
 UI\EnchantTooltip.lua
 UI\VendorPins.lua
 UI\WayArrow.lua
-UI\TravelCard.lua
-UI\TravelMap.lua
 UI\MailReport.lua
 UI\GoldGoal.lua
 UI\QueueMailPanel.lua
@@ -168,9 +156,6 @@ UI\RoadView.lua
 UI\Tab_LevelUp.lua
 UI\Welcome.lua
 UI\Tab_Disenchanting.lua
-UI\DealsFavor.lua
-UI\DealsWrits.lua
-UI\Tab_Deals.lua
 UI\Tab_Queue.lua
 UI\Tab_Gather.lua
 UI\Tab_Prices.lua
