@@ -118,7 +118,7 @@ Gold Tracker by its heading. Forever has the same trap.
 Forever's other changes to these rows.
 
 
-## 3. Auction prices and listing lengths
+## 3. Auction prices, listing lengths and far-under prices
 
 `Core/Util.lua`, `Logic/Profit.lua`, `Logic/Posting.lua`,
 `Logic/SellOut.lua`, `UI/PostPanel.lua` (a comment), the five locale files
@@ -143,6 +143,18 @@ lengths. PR: "Fix auction posting" (2026-10-31).
 - Listing lengths are Retail's 12, 24 and 48 hours (`Posting.DURATIONS`,
   `SellOut.SECONDS`, `SellOut.LABELS`). The values the game takes, 1, 2 and
   3, are the same, so saved `postDuration` picks keep working.
+
+- A price far under the usual one (under the fifth-of-market guard, but
+  not under what a vendor pays) asks instead of refusing (the owner,
+  2026-10-31, after Peacebloom sat on Ready to sell with no reason given).
+  `Posting:GetPriceFloor` returns which floor it is as a third value;
+  `Posting:FarUnderUsual` and `AskFarUnder` put up the usual List It / Skip
+  box with "This is far under what it usually sells for.", and Yes lists it
+  as a typed price is (the guard stood aside). `Request` asks at its three
+  `RefusesEarly` points, box or no box. The Sell row says "Far under its
+  usual price" and its List button's hover says it asks first
+  (`UI/PostPanel.lua`). List Next still passes such a row over. Three new
+  lines in each locale file; tested in `tools/test_farunder.lua`.
 
 **Sync rule: Blend.** Keep the flag and the `Util.WHOLE_SILVER_ONLY` checks.
 A new Forever price path that leaves commodities in copper gets the same
