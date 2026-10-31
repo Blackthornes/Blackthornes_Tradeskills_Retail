@@ -307,7 +307,7 @@ local function NewView(opts)
         detail.materialsHeading:Hide()
         detail.learnHeading:Hide()
         detail.learn:SetText("")
-        detail.note:SetText(L["Values use the prices you have scanned. Recipes come from Classic's data, corrected by what your profession windows and recipe tooltips show."])
+        detail.note:SetText(L["Values use the prices you have scanned and what your profession windows and recipe tooltips show."])
     end
 
     local function ShowEntry(detail, entry)

@@ -161,18 +161,46 @@ A new Forever price path that leaves commodities in copper gets the same
 check, and a Forever test that loads `Core/Util.lua` and expects a
 commodity's copper gets the `WHOLE_SILVER_ONLY = false` line.
 
+## 3b. No Forever or sister-addon words on Retail (the words pass)
+
+Retail players never read about Forever, Classic, last names or the sister
+addons that have no Retail version yet (the owner approved the words,
+2026-10-31; the same approach as Farmer for Retail's section 13).
+
+- `Core/SisterNote.lua`: Farmer for Retail's copy, with `Note.ON_RETAIL =
+  { Blackthornes_Farmer = true, Blackthornes_TS = true }` and
+  `Note:Listed()`, so the login chat line and the About page name only the
+  Retail addons. Add a folder when a sister ships for Retail.
+  `tools/test_sisternote.lua` is Farmer for Retail's plus a Tradeskills check.
+- `UI/About.lua`: Farmer for Retail's copy (the list reads `Sisters:Listed()`),
+  its third `THANKS` paragraph "Tradeskills is new on Retail...".
+- `UI/RecipeBookView.lua` (Recipes to learn's note) and
+  `UI/Tab_Disenchanting.lua` (the chances note) no longer name Classic.
+- `UI/Tab_Settings.lua`: the Keep What Other Addons Need hover names only
+  Farmer goals; Your Other Account no longer asks for a last name;
+  "Upgrade Arrows:" and "Keep Upgrades for Alts:" show only while
+  Blackthornes Equipment is loaded (`HasEquipment`), their `Refresh` lines
+  guarded.
+- `UI/QueueMailPanel.lua`: `QueueMailPanel.ASKS_LAST_NAME = false`, so the
+  mailbox never asks for a last name (Retail has none; the record never has
+  `surname`, so it asked on every mail).
+- The same keys in every `Locale/*.lua`.
+- `NEWS.md` starts fresh: only Retail sections (Forever's are in git
+  history), so `Core/WhatsNewText.lua` holds no Forever lines. `CHANGELOG.md`
+  keeps Forever's history under Retail's sections, as Farmer for Retail does.
+  The first Retail version is 1.6.0 (`ns.RELEASED_VERSION`).
+
+**Sync rule: Blend.** Take Forever's changes to these files and keep these
+lines. A new Forever string that names Forever, Classic, last names or a
+sister addon gets Retail words, shown to the owner first. In a catch-up,
+`NEWS.md`, `CHANGELOG.md`, `Core/WhatsNewText.lua` and `RELEASED_VERSION`
+keep Retail's: never take Forever's sections or version.
+
 ## 4. Still Forever's, for later steps
 
 Not changed in the copy, on purpose (no new player features yet). Each is
 its own step in the port plan, on the owner's yes:
 
-- Forever and sister words players read: `NEWS.md`,
-  `Core/WhatsNewText.lua` (written from NEWS.md, still Forever's notes),
-  `CHANGELOG.md`, and the sister note and About page
-  (`Core/SisterNote.lua`, `UI/About.lua`), which still name every sister.
-  Farmer for Retail lists only Retail sisters through
-  `SisterNote.ON_RETAIL`; bring that over in the words pass and name only
-  the addons that ship for Retail.
 - Classic data that may not fit Retail: the recipe book
   (`Data/RecipeBook.lua`), Learn next's trainer and vendor spots
   (`Data/LearnSpots.lua`, `Data/VendorSpots.lua`), vendor prices
