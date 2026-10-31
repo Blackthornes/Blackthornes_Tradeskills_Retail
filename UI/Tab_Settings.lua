@@ -115,6 +115,16 @@ local function Searchable(page, frame, words)
     }
 end
 
+--- More words the search finds `frame` by, such as the heading it sits
+--- under, so "goblin" finds Gold Tracker under GOBLIN GOLD.
+local function AlsoFindBy(frame, words)
+    for _, entry in ipairs(searchables) do
+        if entry.frame == frame then
+            entry.words = entry.words .. " " .. (words or ""):lower()
+        end
+    end
+end
+
 --- Section heading with a rule underneath, next in a page's column.
 local function CreateSection(page, column, text)
     local section = CreateFrame("Frame", nil, page.content)
@@ -1623,7 +1633,7 @@ local function Build(outer)
         L["A coin when another of your characters can make a material for less."])
     SoundRow("goalSound", L["Farmer Goal Set:"],
         L["A cheer when Set goal on the Gather tab makes a Farmer goal."])
-    SoundRow("goldTrackerSound", L["Goblin Gold:"],
+    SoundRow("goldTrackerSound", L["Goblin Gold Sound:"],
         L["Coins at each tenth of your gold goal, and a cheer when you reach it."],
         function() if ns.GoldGoalUI then ns.GoldGoalUI.Play("step") end end)
     SoundRow("statsCheer", L["Best Week of Sales:"],
@@ -1716,6 +1726,7 @@ local function Build(outer)
     CreateSection(pages.look, 2, L["GOBLIN GOLD"])
     local goldRow = CreateRow(pages.look, 2, L["Gold Tracker:"],
         L["A small bar with the gold on all your characters on this realm and side."])
+    AlsoFindBy(goldRow, L["Goblin Gold"])
 
     widgets.goldTracker = Widgets.CreateCheckbox(goldRow, L["On"], function(checked)
         if ns.GoldGoal then ns.GoldGoal:SetOn(checked) end

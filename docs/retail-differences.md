@@ -104,6 +104,20 @@ Changed here, so a Settings row shows only where its feature loads:
 Forever row, command or call into one of the left-out modules gets the same
 `if ns.X` guard here.
 
+## 2b. Goblin Gold in Settings (asked 2026-10-31)
+
+A player searching Settings for "goblin" found only the sound row
+("Goblin Gold:" under SOUNDS on the General page) and ticked it, and no
+bar came up: the bar is "Gold Tracker:" under GOBLIN GOLD on the Look
+page. In `UI/Tab_Settings.lua` the sound row is now "Goblin Gold Sound:"
+(a new key in every `Locale/*.lua`; the old "Goblin Gold:" lines are
+gone), and `AlsoFindBy(goldRow, L["Goblin Gold"])` lets the search find
+Gold Tracker by its heading. Forever has the same trap.
+
+**Sync rule: Blend.** Keep the new label and the `AlsoFindBy` line; take
+Forever's other changes to these rows.
+
+
 ## 3. Auction prices and listing lengths
 
 `Core/Util.lua`, `Logic/Profit.lua`, `Logic/Posting.lua`,

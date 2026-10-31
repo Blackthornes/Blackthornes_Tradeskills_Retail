@@ -2913,7 +2913,7 @@ L["%d for the vendor"] = "%d 件卖给商人"
 
 -- Goblin Gold (UI/GoldGoal.lua, Logic/GoldGoal.lua)
 L["Goblin Gold"] = "地精金币"
-L["Goblin Gold:"] = "地精金币："
+L["Goblin Gold Sound:"] = "地精金币音效："
 L["GOBLIN GOLD"] = "地精金币"
 L["Gold Tracker:"] = "金币显示条："
 L["Gold Goal:"] = "金币目标："
