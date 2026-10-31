@@ -362,7 +362,7 @@ local function CreateMaterialRow(row)
 
     -- Takes a line asked for from Blackthornes Equipment off the list.
     row.remove = Widgets.CreateButton(row, "x", function()
-        if row.data then ns.Queue:RemoveBuys(row.data.itemID) end
+        if row.data then ns.Queue:RemoveBuys(row.data.listedItemID or row.data.itemID) end
     end, { width = REMOVE_WIDTH, height = 16, danger = true,
         tooltip = L["Take this off the list to buy. Your queued crafts keep what they need."] })
     row.remove:Hide()

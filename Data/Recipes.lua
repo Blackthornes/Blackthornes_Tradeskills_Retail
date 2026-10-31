@@ -35,10 +35,105 @@ Recipes.SKILL_LINE_PROFESSIONS = {
     [2947] = "Skinning",       [393] = "Skinning",
     [2948] = "Tailoring",      [197] = "Tailoring",
     [185] = "Cooking",         [129] = "First Aid",
+    -- Retail's two crafts Classic never had.
+    [773] = "Inscription",     [755] = "Jewelcrafting",
 }
 
 local ENGLISH_PROFESSIONS = {}
 for _, name in pairs(Recipes.SKILL_LINE_PROFESSIONS) do ENGLISH_PROFESSIONS[name] = true end
+
+--------------------------------------------------------------------------------
+-- Skill by expansion (Retail)
+--------------------------------------------------------------------------------
+
+-- On Retail each profession has a skill line for every expansion (Classic
+-- Alchemy, Outland Alchemy, up to Midnight's), each with its own skill, and
+-- a recipe belongs to one of them. The game names a line's profession by
+-- the line above it, so each one is learned when the game says so: from a
+-- recipe (GetTradeSkillLineForRecipe's third answer) or from the profession
+-- window's list of expansions (GetChildProfessionInfos). Learned lines go
+-- in SKILL_LINE_PROFESSIONS, so everything that asks which profession a
+-- line is (Enchanting, the queue's order, Keep in stock) knows them, and
+-- account wide in `expansionSkillLines[line] = profession line` (never
+-- rename it), so they are known at login. Each line's skill is kept per
+-- character in `expansionSkills[line] = { skill, max, at }` (never rename
+-- it): with every profession window shut Retail says 0 of 0 by line.
+
+--- A line under a profession line: learned, kept, and known from now on.
+-- @return true when the line is now known
+function Recipes.NoteLineParent(line, parent)
+    if type(line) ~= "number" or type(parent) ~= "number" or line == parent then return false end
+    local english = Recipes.SKILL_LINE_PROFESSIONS[parent]
+    if not english then return false end
+    if Recipes.SKILL_LINE_PROFESSIONS[line] == nil then
+        Recipes.SKILL_LINE_PROFESSIONS[line] = english
+    end
+    if ns.db then
+        if type(ns.db.expansionSkillLines) ~= "table" then ns.db.expansionSkillLines = {} end
+        ns.db.expansionSkillLines[line] = parent
+    end
+    return true
+end
+
+--- Lay the lines learned before (the save) into SKILL_LINE_PROFESSIONS.
+function Recipes:LoadExpansionLines()
+    local saved = ns.db and ns.db.expansionSkillLines
+    for line, parent in pairs(type(saved) == "table" and saved or {}) do
+        local english = Recipes.SKILL_LINE_PROFESSIONS[parent]
+        if type(line) == "number" and english and Recipes.SKILL_LINE_PROFESSIONS[line] == nil then
+            Recipes.SKILL_LINE_PROFESSIONS[line] = english
+        end
+    end
+end
+
+--- Read every expansion line of the profession window shown: which
+--- profession each belongs to, and this character's skill in it. Only
+--- while a window is open; a line read as 0 of 0 is never kept.
+-- @return how many lines were read
+function Recipes:ReadExpansionSkills()
+    local api = C_TradeSkillUI
+    if type(api) ~= "table" or type(api.GetChildProfessionInfos) ~= "function" then return 0 end
+
+    local ok, list = pcall(function()
+        local infos = api.GetChildProfessionInfos()
+        local plain = {}
+        for _, info in ipairs(type(infos) == "table" and infos or {}) do
+            if type(info) == "table" and type(info.professionID) == "number" then
+                plain[#plain + 1] = {
+                    line = info.professionID + 0,
+                    parent = type(info.parentProfessionID) == "number" and info.parentProfessionID + 0 or nil,
+                    skill = tonumber(info.skillLevel) or 0,
+                    max = tonumber(info.maxSkillLevel) or 0,
+                }
+            end
+        end
+        return plain
+    end)
+    if not ok or type(list) ~= "table" then return 0 end
+
+    local record = list[1] and self:GetCharacterRecord(true)
+    local read = 0
+    for _, line in ipairs(list) do
+        if line.parent then Recipes.NoteLineParent(line.line, line.parent) end
+        if record and line.max > 0 then
+            if type(record.expansionSkills) ~= "table" then record.expansionSkills = {} end
+            record.expansionSkills[line.line] = { skill = line.skill, max = line.max, at = time() }
+            read = read + 1
+        end
+    end
+    return read
+end
+
+--- This character's skill in a line as last read, or nil.
+-- @return skill, max
+function Recipes:SavedLineSkill(line, characterKey)
+    local record = ns.db and ns.db.characters
+        and ns.db.characters[characterKey or ns.Config:GetCharacterKey()]
+    local saved = type(record) == "table" and type(record.expansionSkills) == "table"
+        and record.expansionSkills[line]
+    if type(saved) ~= "table" or (tonumber(saved.max) or 0) <= 0 then return nil end
+    return tonumber(saved.skill) or 0, tonumber(saved.max)
+end
 
 -- [the client's name for a profession] = its English name. Read from the
 -- client once it answers, then kept for the session.
@@ -576,8 +671,14 @@ local function GetRecipeSkillLine(recipeID, info)
     if info and info.skillLineID then return info.skillLineID end
 
     if Util.HasFunction("C_TradeSkillUI.GetTradeSkillLineForRecipe") then
-        local ok, skillLineID = pcall(C_TradeSkillUI.GetTradeSkillLineForRecipe, recipeID)
-        if ok and skillLineID then return skillLineID end
+        local ok, skillLineID, _, parentID = pcall(C_TradeSkillUI.GetTradeSkillLineForRecipe, recipeID)
+        if ok and skillLineID then
+            -- Retail: the recipe's expansion line, and the profession above it.
+            if type(skillLineID) == "number" and type(parentID) == "number" then
+                Recipes.NoteLineParent(skillLineID, parentID)
+            end
+            return skillLineID
+        end
     end
 
     if Util.HasFunction("C_TradeSkillUI.GetProfessionInfoByRecipeID") then
@@ -842,9 +943,16 @@ function Recipes:Harvest()
                 local first = slot.reagents and slot.reagents[1]
 
                 if isRequired and first and first.itemID and (slot.quantityRequired or 0) > 0 then
+                    -- Retail: a slot that takes the same reagent at two or
+                    -- three quality ranks lists each one. `itemID` stays the
+                    -- first; `ranks` keeps them all (Logic/ReagentRanks.lua),
+                    -- so every rank counts and the cheapest is bought.
+                    local ranks = ns.ReagentRanks and ns.ReagentRanks.FromSlot(slot)
+                    if ranks and ns.ReagentRanks then ns.ReagentRanks:Note(ranks) end
                     reagents[#reagents + 1] = {
                         itemID = first.itemID,
                         quantity = slot.quantityRequired,
+                        ranks = ranks,
                     }
                 end
             end
@@ -948,6 +1056,8 @@ function Recipes:OnTradeSkillUpdate()
     -- A profession window is open, so skill levels are certainly loaded now.
     -- This is the read that fixes a zeroed one from login.
     self:RefreshProfessions()
+    -- And the skill in each of its expansions (Retail).
+    pcall(self.ReadExpansionSkills, self)
 
     -- The list fires repeatedly while a profession window settles; coalesce.
     if self.harvestTimer then
@@ -1057,6 +1167,7 @@ function Recipes:RefreshProfessions()
 end
 
 function Recipes:OnEnable()
+    self:LoadExpansionLines()
     ns.RegisterEvent(self, "TRADE_SKILL_LIST_UPDATE", self.OnTradeSkillUpdate)
     ns.RegisterEvent(self, "TRADE_SKILL_SHOW", self.OnTradeSkillUpdate)
 

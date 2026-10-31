@@ -462,7 +462,8 @@ function Profit:GetCraftableCount(recipeID, characterKey)
 
     for _, reagent in ipairs(recipe.reagents) do
         -- Counted against whoever would do the crafting, not against you.
-        local have = ns.Inventory:GetCharacterBagCount(characterKey, reagent.itemID)
+        -- Every quality rank of a reagent (Retail): a slot can mix them.
+        local have = ns.Inventory:GetCharacterBagCount(characterKey, reagent.itemID, true)
         local canMake = math.floor(have / reagent.quantity)
 
         if canMake < possible then possible = canMake end

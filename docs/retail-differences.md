@@ -196,6 +196,70 @@ sister addon gets Retail words, shown to the owner first. In a catch-up,
 `NEWS.md`, `CHANGELOG.md`, `Core/WhatsNewText.lua` and `RELEASED_VERSION`
 keep Retail's: never take Forever's sections or version.
 
+## 3c. Reagent quality ranks, skill by expansion, the Warband bank
+
+Step 2 of the port plan (the owner said go, 2026-10-31). No new words for
+players.
+
+- **Quality ranks.** A Retail reagent slot takes the same herb at rank 1,
+  2 or 3, each its own item. `Data/Recipes.lua` (Harvest) keeps every item
+  of a slot in `reagent.ranks` beside `itemID` (still the first, so old
+  readers work; never rename `ranks`), and `Logic/RecipeBook.lua`
+  (`NoteSeen`) keeps them too. `Logic/ReagentRanks.lua` (Retail's own file,
+  in the TOC before `Logic/Cost.lua`) lays out a lookup from any rank to its
+  group from the saved recipes; nothing new is saved.
+  - Counting: `Data/Inventory.lua`'s `GetBagCount`, `GetBankCount`,
+    `GetMailCount`, `GetTotalCount`, `GetOwnedCount`,
+    `GetCharacterBagCount`, `GetAltCounts` and `GetAltTotal` take a second
+    argument `anyRank`; given, every rank counts. Left out, the item alone
+    (selling, posting). The reagent readers pass it: `Logic/Cost.lua`
+    (`GetCraftCost`, `GetShortfall`), `Logic/Queue.lua` (`HeldBy`,
+    `InMailFor` and `BoughtBeyondMail` over every rank, sub-craft sizing,
+    the cash view, the shopping list), `Logic/Profit.lua`
+    (`GetCraftableCount`).
+  - Buying: `Cost:GetReagentUnitCost` prices a reagent at its cheapest
+    rank and returns that rank third (`Cost:BuyRank`); the old body is
+    `Cost:OneRankUnitCost`. A craft line carries `buyItemID`; the queue's
+    `BuyMore` buys it. A shopping list row is the cheapest rank's
+    (`itemID`), with `listedItemID` for the rank the recipe lists first
+    (its buys and alt offers; the Queue tab's x removes by it).
+    `Cost:FindRecipeForItem` finds a recipe that makes any rank.
+  - Holding back: `Queue:GetReservedItems` holds every rank; the mail batch
+    (`QueueMail:GetMailBatch`) takes any rank.
+- **Skill by expansion.** Each profession has a skill line per expansion.
+  `Data/Recipes.lua`: Inscription (773) and Jewelcrafting (755) join
+  `SKILL_LINE_PROFESSIONS`; `Recipes.NoteLineParent` learns an expansion
+  line's profession from a recipe (`GetTradeSkillLineForRecipe`'s third
+  answer) or the window (`Recipes:ReadExpansionSkills`,
+  `GetChildProfessionInfos`, from `OnTradeSkillUpdate`) and adds it to
+  `SKILL_LINE_PROFESSIONS`; kept account wide in
+  `expansionSkillLines[line] = profession line` and laid in at login
+  (`LoadExpansionLines`). Each line's skill is kept per character in
+  `expansionSkills[line] = { skill, max, at }` (never rename either),
+  since a shut window says 0 of 0. `SkillUp:GetSkillLevel` and the Level
+  Up tab's `ProfessionInfo` fall back to it (`Recipes:SavedLineSkill`).
+  The Profit and Level Up pickers already list recipes by their line, so
+  each expansion is its own entry there, named by the game.
+- **Warband bank.** `Data/Inventory.lua` reads the bank by the client's
+  named tabs: the character's (`CharacterBankTab_1` to 6) for its own
+  bank, the Warband bank's (`AccountBankTab_1` to 5) apart, kept account
+  wide in `warbandBank` and `warbandBankAt` (never rename them;
+  `SnapshotWarband`, `GetWarbandCount`, `IsWarbandContainer`). Before, the
+  old guessed range (6 to 12) took Warband tab 1 for the character's bank.
+  `GetBankCount` is the character's bank (`GetCharacterBankCount`) plus the
+  Warband bank, for the character playing only; a saved character's bank
+  never holds it, so the account's stock is counted once.
+- Tested in `tools/test_reagentranks.lua` and `tools/test_expansionlines.lua`.
+- Not yet: the queue saying "put it in your Warband bank" instead of a
+  mail, mailing mixed ranks to an alt (mail still takes the listed rank),
+  a Warband row in the Bank view, crafting from the Warband bank in "can
+  craft now". Each needs new words, so it waits on the owner. Nothing here
+  has been seen in game.
+
+**Sync rule: Keep Retail** for these lines; Blend Forever's changes around
+them. A Forever reader that counts a reagent passes `anyRank`; one that
+buys one uses `Cost:BuyRank`.
+
 ## 4. Still Forever's, for later steps
 
 Not changed in the copy, on purpose (no new player features yet). Each is
@@ -207,7 +271,6 @@ its own step in the port plan, on the owner's yes:
   (`Data/VendorPrices.lua`), Road to 300 and its Welcome card
   (`Logic/RoadPlan.lua`, `Logic/Welcome.lua`, `UI/RoadView.lua`,
   `UI/Welcome.lua`), Classic disenchant results. They still load.
-- Reagent quality ranks, skill by expansion and the Warband bank.
 - The release workflow (`.github/workflows/release.yml`) is Forever's. It
   runs only on a `vX.Y.Z` tag, which the owner pushes, and uploads only with
   the `CF_API_KEY` secret. The Discord steps do nothing without their

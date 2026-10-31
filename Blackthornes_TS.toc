@@ -47,6 +47,7 @@ Data\RecipeBook.lua
 Data\LearnSpots.lua
 Data\Vendor.lua
 
+Logic\ReagentRanks.lua
 Logic\Cost.lua
 Logic\CraftTime.lua
 Logic\Disenchant.lua

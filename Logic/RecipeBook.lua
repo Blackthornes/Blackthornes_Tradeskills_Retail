@@ -141,7 +141,8 @@ function RecipeBook:NoteSeen(recipeID, data)
 
     local reagents = {}
     for _, reagent in ipairs(data.reagents or {}) do
-        reagents[#reagents + 1] = { itemID = reagent.itemID, quantity = reagent.quantity }
+        reagents[#reagents + 1] = { itemID = reagent.itemID, quantity = reagent.quantity,
+            ranks = reagent.ranks }
     end
 
     local old = seen[recipeID]

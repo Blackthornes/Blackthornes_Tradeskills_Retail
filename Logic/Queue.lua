@@ -163,6 +163,18 @@ end
 --- off, mailbox. Live for the character logged in; for anyone else as last
 --- seen, plus what has been mailed to them since.
 function Queue:HeldBy(characterKey, itemID)
+    -- A reagent with quality ranks (Retail): every rank, as a craft takes any.
+    local ranks = ns.ReagentRanks and ns.ReagentRanks:Of(itemID)
+    if ranks then
+        local total = 0
+        for _, id in ipairs(ranks) do total = total + self:HeldByOneRank(characterKey, id) end
+        return total
+    end
+    return self:HeldByOneRank(characterKey, itemID)
+end
+
+--- HeldBy for one item alone, whatever other ranks it has.
+function Queue:HeldByOneRank(characterKey, itemID)
     if not characterKey or characterKey == SelfKey() then
         -- Mail an alt sent here counts until the mailbox is read, as it does
         -- for any other character. Logged in before opening the mailbox, the
@@ -197,6 +209,17 @@ end
 --- it, so HeldBy less this is what its bags and bank hold. Butler's jobs
 --- put a mailbox visit first when a craft counts on it (2026-10-13).
 function Queue:InMailFor(characterKey, itemID)
+    local ranks = ns.ReagentRanks and ns.ReagentRanks:Of(itemID)
+    if ranks then
+        local total = 0
+        for _, id in ipairs(ranks) do total = total + self:InMailForOneRank(characterKey, id) end
+        return total
+    end
+    return self:InMailForOneRank(characterKey, itemID)
+end
+
+--- InMailFor for one item alone.
+function Queue:InMailForOneRank(characterKey, itemID)
     local inMail = 0
     if not characterKey or characterKey == SelfKey() then
         if ns.Inventory and ns.Inventory.GetMailCount then
@@ -524,11 +547,19 @@ end
 function BoughtBeyondMail(itemID, inMail)
     local buys = ns.AHBuys
     if not buys then return 0 end
-    local pending = buys:GetPending(itemID)
+
+    -- A reagent with quality ranks (Retail): the buys of every rank, against
+    -- the mail of every rank, as one.
+    local ranks = (ns.ReagentRanks and ns.ReagentRanks:Of(itemID)) or { itemID }
+    local pending, unread = 0, 0
+    for _, id in ipairs(ranks) do
+        pending = pending + (buys:GetPending(id) or 0)
+        unread = unread + (buys:GetUnread(id) or 0)
+    end
     if pending <= 0 then return 0 end
-    if inMail == nil then inMail = ns.Inventory:GetMailCount(itemID) end
+    if inMail == nil then inMail = ns.Inventory:GetMailCount(itemID, true) end
     if (inMail or 0) <= 0 then return pending end
-    return math.max(buys:GetUnread(itemID), pending - inMail, 0)
+    return math.max(unread, pending - inMail, 0)
 end
 
 --- The profession a queued craft is made in, by English name, so the
@@ -766,7 +797,7 @@ function Queue:RebuildDependencies()
 
                 if subRecipe then
                     local short = HeldPool(pool, itemID,
-                        ns.Inventory:GetOwnedCount(itemID) + BoughtBeyondMail(itemID), need.units)
+                        ns.Inventory:GetOwnedCount(itemID, true) + BoughtBeyondMail(itemID), need.units)
 
                     if short > 0 then
                         -- Missing units become crafts, since one craft can
@@ -1626,7 +1657,8 @@ function Queue:BuildEntryCosts()
     local boughtSoFar = {}
     local function BuyMore(reagent, more)
         if more <= 0 then return 0 end
-        local itemID, unit, source = reagent.itemID, reagent.unitCost or 0, reagent.source
+        -- The rank bought, the cheapest one for a reagent with ranks.
+        local itemID, unit, source = reagent.buyItemID or reagent.itemID, reagent.unitCost or 0, reagent.source
         local before = boughtSoFar[itemID] or 0
         boughtSoFar[itemID] = before + more
         local was = ns.Cost:CostOfMany(itemID, before, unit, source) or unit * before
@@ -1669,7 +1701,7 @@ function Queue:BuildEntryCosts()
 
                     if cashView then
                         if bagsLeft[itemID] == nil then
-                            bagsLeft[itemID] = ns.Inventory:GetBagCount(itemID)
+                            bagsLeft[itemID] = ns.Inventory:GetBagCount(itemID, true)
                         end
                         free = math.min(needed, bagsLeft[itemID])
                         bagsLeft[itemID] = bagsLeft[itemID] - free
@@ -1731,7 +1763,14 @@ function Queue:GetReservedItems()
     local reserved = {}
     for itemID, needed in pairs(required) do
         local short = needed - (queuedToMake[itemID] or 0)
-        if short > 0 then reserved[itemID] = short end
+        if short > 0 then
+            -- Every quality rank of a reagent is held back (Retail): the
+            -- craft can use any of them.
+            local ranks = ns.ReagentRanks and ns.ReagentRanks:Of(itemID)
+            for _, id in ipairs(ranks or { itemID }) do
+                reserved[id] = math.max(reserved[id] or 0, short)
+            end
+        end
     end
     return reserved
 end
@@ -1805,8 +1844,10 @@ function Queue:BuildShoppingList()
         if needed > 0 then
             -- A shopping list asks "must I buy this", so it counts the bank: you
             -- already own it, it just needs collecting.
-            local inBags = ns.Inventory:GetBagCount(itemID)
-            local inBank = ns.Inventory:GetBankCount(itemID)
+            -- Every quality rank of a reagent counts (Retail); the bank
+            -- holds the Warband bank too, counted once (Data/Inventory.lua).
+            local inBags = ns.Inventory:GetBagCount(itemID, true)
+            local inBank = ns.Inventory:GetBankCount(itemID, true)
             local have = inBags + inBank
 
             -- A sub-craft was sized against everything owned, mail included, so
@@ -1814,7 +1855,7 @@ function Queue:BuildShoppingList()
             -- same way keeps the two from disagreeing about what is left to buy.
             local inMail = 0
             if queuedToMake[itemID] then
-                inMail = ns.Inventory:GetMailCount(itemID)
+                inMail = ns.Inventory:GetMailCount(itemID, true)
             end
 
             -- Bought on the auction house and waiting in the mail: yours, so
@@ -1825,6 +1866,13 @@ function Queue:BuildShoppingList()
             have = have + inMail
 
             local shortfall = math.max(0, needed - have)
+
+            -- A reagent with quality ranks (Retail) is bought at its cheapest
+            -- rank, as its cost is worked out (Cost:GetReagentUnitCost). The
+            -- row is that rank's from here on; `listedItemID` is the rank
+            -- the recipe lists first, which the queue's own keys use.
+            local listedItemID = itemID
+            itemID = ns.Cost.BuyRank and ns.Cost:BuyRank(itemID) or itemID
 
             -- The same auction price material cost uses, so a lone listing far
             -- below the rest is left out here too.
@@ -1889,6 +1937,7 @@ function Queue:BuildShoppingList()
 
             list[#list + 1] = {
                 itemID = itemID,
+                listedItemID = listedItemID ~= itemID and listedItemID or nil,
                 needed = needed,
                 have = have,
                 inBags = inBags,
@@ -1919,17 +1968,17 @@ function Queue:BuildShoppingList()
                 -- Both prices known: how much choosing the cheaper one saves.
                 savingPerUnit = savingPerUnit,
                 savingTotal = savingPerUnit and (savingPerUnit * shortfall) or nil,
-                onAlts = ns.Inventory:GetAltTotal(itemID),
+                onAlts = ns.Inventory:GetAltTotal(itemID, true),
                 -- { [characterKey] = units } of this the others' crafts use,
                 -- and how many of those they already hold.
                 forOthers = othersNeed,
                 othersHold = othersHold,
                 -- { { forItem, count }, ... } asked for by EnsureBuy: the
                 -- row gets an x, and the tooltip says what it is for.
-                buys = wanted[itemID],
+                buys = wanted[listedItemID],
                 -- Cheaper to make on another character, when asked to look.
                 altCraft = altContext and shortfall > 0
-                    and self:GetAltCraftOffer(itemID, shortfall, unitCost, altContext) or nil,
+                    and self:GetAltCraftOffer(listedItemID, shortfall, unitCost, altContext) or nil,
             }
         end
     end

@@ -1094,7 +1094,12 @@ function QueueMail:GetMailBatch()
     local shopping = ns.Queue:GetShoppingList()
     local stillNeeded = {}
     for _, line in ipairs(shopping) do
-        if (line.needed or 0) > (line.inBags or 0) then stillNeeded[line.itemID] = true end
+        if (line.needed or 0) > (line.inBags or 0) then
+            stillNeeded[line.itemID] = true
+            -- Every quality rank of a reagent (Retail): any of them will do.
+            local ranks = ns.ReagentRanks and ns.ReagentRanks:Of(line.itemID)
+            for _, id in ipairs(ranks or {}) do stillNeeded[id] = true end
+        end
     end
 
     local inMail = {}
