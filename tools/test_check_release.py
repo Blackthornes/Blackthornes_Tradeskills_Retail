@@ -28,6 +28,10 @@ expect("an unwritten version is refused", check("v0.3.0", LOG, TOC) != [])
 expect("a tag without the v is refused", check("0.2.0", LOG, TOC) != [])
 expect("a tag that is not a version is refused", check("vnext", LOG, TOC) != [])
 expect("a changelog with no sections is refused", check("v0.2.0", "# Changelog\n", TOC) != [])
+expect("the Forever CurseForge project is refused",
+       check("v0.2.0", LOG, TOC + "## X-Curse-Project-ID: 1710638\n") != [])
+expect("another project is fine",
+       check("v0.2.0", LOG, TOC + "## X-Curse-Project-ID: 999\n") == [])
 INIT = 'ns.RELEASED_VERSION = "0.2.0"\n'
 expect("a matching released version releases", check("v0.2.0", LOG, TOC, INIT) == [])
 expect("a released version left behind is refused",

@@ -13,6 +13,59 @@ Nothing private goes in this file (no local paths, emails or account names).
 It never ships: `.pkgmeta` leaves it out of the zip and
 `tools/check_package.py` refuses it.
 
+## This repo is the Retail copy
+
+`Blackthornes/Blackthornes_Tradeskills_Retail` is Tradeskills for Retail
+WoW, copied from `Blackthornes/Blackthornes_Tradeskills` (Forever) with its
+history on 2026-10-31, the same way Farmer for Retail
+(`Blackthornes/Blackthornes_Farmer_Retail`) was made. The owner's rule:
+Forever comes first, and nothing done here may ever touch the Forever
+addon. So:
+
+- Never push to, or open PRs, issues or comments on, the Forever repos (or
+  the Classic ones) from work here. Changes come over from Forever on
+  purpose (merge or copy), never the other way.
+- Catching up: merge Forever's `main` (read only, from a plain clone) into
+  a Retail branch, so the shared history keeps later merges clean. Read
+  `docs/retail-differences.md` first: it lists every place Retail differs
+  from Forever on purpose and whether a sync keeps Retail's lines or blends
+  Forever's change in. Every Retail-only PR adds or updates its entry
+  there. Copied from Forever's `a33a264` (2026-10-31).
+- The Retail TOC names Retail's interface (120105, as Farmer for Retail)
+  and leaves out the Forever-only features (`RETAIL_LEFT_OUT` in
+  `tools/test_retail.lua`, also in `.pkgmeta`): Merchant's Favor, Waylaid
+  Crates and the favor goal, Craftsman's and sealed writs, the Favors and
+  Writs tab, Legacy perks, sending data to Blackthornes, the recipes and
+  vendor spots Forever added, and Guide Me (Classic routes). The files stay
+  in the repo only so Forever changes merge cleanly; their Settings rows
+  show only where they are loaded. `tools/test_retail.lua` checks the TOC
+  and that the addon loads, logs in, draws every tab and opens Settings
+  without them. A Retail version of any of them is its own job, on the
+  owner's yes.
+- Keep the folder `Blackthornes_TS` and the saves `BlackthornesTSDB` and
+  `BlackthornesTSCharDB`; never rename them.
+- Never put Forever's CurseForge ID (1710638) in the TOC:
+  `tools/check_release.py` refuses a tag that does. Retail has its own
+  project, **1776347** ("Blackthornes Tradeskills Retail", made
+  2026-10-31), in the TOC; uploads need the `CF_API_KEY` repository secret,
+  which the owner sets himself. Nothing is released or uploaded without his
+  go-ahead, and Retail releases post nothing to Discord for now (those
+  secrets stay unset).
+- Farmer for Retail is the sister on Retail. The files the addons share
+  (the house kit, Settings pages, What's New, the sister note and the rest
+  named "the same file in every addon" below) follow the Retail copies:
+  a fix to one belongs in both Retail repos, and Farmer for Retail must
+  catch up to Forever before the newest shared files (One Window, the
+  shared minimap button, the house kit) match here.
+- Not done yet, each a later step on the owner's yes (see the port plan and
+  `docs/retail-differences.md`, section 3): Retail words (no Forever or
+  sister-addon words players read; the sister note naming only Retail
+  addons), reagent quality ranks, skill by expansion, the Warband bank,
+  Learn next from the game, Retail disenchant results and a Retail road to
+  max. Nothing of this copy has been seen in game yet.
+- The rest of this file describes the Forever addon; read it as the
+  starting point, not as what Retail has.
+
 ## What the Farmer project did here
 
 - **Release setup (PR #77, merged 2026-09-25).** Pushing a `vX.Y.Z` tag on
