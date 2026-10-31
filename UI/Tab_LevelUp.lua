@@ -117,9 +117,21 @@ local function ProfessionInfo(skillLineID)
     if not Util.HasFunction("C_TradeSkillUI.GetProfessionInfoBySkillLineID") then return nil end
 
     local ok, info = pcall(C_TradeSkillUI.GetProfessionInfoBySkillLineID, skillLineID)
-    if ok and type(info) == "table" then return info end
+    if not (ok and type(info) == "table") then info = nil end
 
-    return nil
+    -- Retail: an expansion line reads 0 of 0 with the profession window
+    -- shut, so its skill as last read (Recipes:SavedLineSkill).
+    if (not info or (info.maxSkillLevel or 0) <= 0) and ns.Recipes and ns.Recipes.SavedLineSkill then
+        local gotIt, skill, max = pcall(ns.Recipes.SavedLineSkill, ns.Recipes, skillLineID)
+        if gotIt and skill and max then
+            local copy = {}
+            for key, value in pairs(info or {}) do copy[key] = value end
+            copy.skillLevel, copy.maxSkillLevel = skill, max
+            return copy
+        end
+    end
+
+    return info
 end
 
 --- The game's colour for a tier, or plain text for one never read.

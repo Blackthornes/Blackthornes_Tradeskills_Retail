@@ -269,7 +269,16 @@ function SkillUp:GetSkillLevel(skillLineID)
         self.levelsAt = time()
     end
 
-    return self.levels[skillLineID]
+    local live = self.levels[skillLineID]
+    if live then return live end
+
+    -- Retail: an expansion line reads 0 of 0 with every profession window
+    -- shut, so its skill as last read (Recipes:ReadExpansionSkills).
+    if ns.Recipes and ns.Recipes.SavedLineSkill then
+        local ok, skill = pcall(ns.Recipes.SavedLineSkill, ns.Recipes, skillLineID)
+        if ok and type(skill) == "number" then return skill end
+    end
+    return nil
 end
 
 function SkillUp:ForgetSkillLevels()

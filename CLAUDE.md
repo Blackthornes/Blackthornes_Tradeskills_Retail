@@ -60,9 +60,17 @@ addon. So:
 - Not done yet, each a later step on the owner's yes (see the port plan and
   `docs/retail-differences.md`, section 4): Retail words (no Forever or
   sister-addon words players read; the sister note naming only Retail
-  addons), reagent quality ranks, skill by expansion, the Warband bank,
-  Learn next from the game, Retail disenchant results and a Retail road to
-  max. Nothing of this copy has been seen in game yet.
+  addons), Learn next from the game, Retail disenchant results and a
+  Retail road to max. Nothing of this copy has been seen in game yet.
+- Reagent quality ranks, skill by expansion and the Warband bank (step 2,
+  2026-10-31; `docs/retail-differences.md` section 3c): a slot keeps every
+  rank (`reagent.ranks`, `Logic/ReagentRanks.lua`), reagent counts pass
+  `anyRank` to `Inventory`, buying takes the cheapest rank
+  (`Cost:BuyRank`); each expansion line is learned and its skill kept
+  (`expansionSkillLines`, `expansionSkills`); the Warband bank is read by
+  its own tabs and counted once, for the character playing (`warbandBank`,
+  `warbandBankAt`). Never rename those saves. Tested in
+  `tools/test_reagentranks.lua` and `tools/test_expansionlines.lua`.
 - The rest of this file describes the Forever addon; read it as the
   starting point, not as what Retail has.
 
