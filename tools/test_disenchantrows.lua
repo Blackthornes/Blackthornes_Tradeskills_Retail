@@ -59,6 +59,8 @@ local prices = {
 }
 
 assert(loadfile(lfs_cwd .. "/Core/Util.lua"))("Blackthornes_TS", ns)
+-- Forever's copper prices for stacks; Retail's whole silver is in test_wholesilver.lua.
+ns.Util.WHOLE_SILVER_ONLY = false
 
 local recipes = {}
 for _, itemID in ipairs({ 1001, 1002, 1011, 1012 }) do

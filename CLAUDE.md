@@ -58,7 +58,7 @@ addon. So:
   catch up to Forever before the newest shared files (One Window, the
   shared minimap button, the house kit) match here.
 - Not done yet, each a later step on the owner's yes (see the port plan and
-  `docs/retail-differences.md`, section 3): Retail words (no Forever or
+  `docs/retail-differences.md`, section 4): Retail words (no Forever or
   sister-addon words players read; the sister note naming only Retail
   addons), reagent quality ranks, skill by expansion, the Warband bank,
   Learn next from the game, Retail disenchant results and a Retail road to

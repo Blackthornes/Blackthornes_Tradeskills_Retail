@@ -321,6 +321,7 @@ L["Profit as a share of the sale price."] = "Прибыль как доля от
 L["PRICE AGE"] = "ВОЗРАСТ ЦЕН"
 L["12 hours"] = "12 часов"
 L["24 hours"] = "24 часа"
+L["48 hours"] = "48 часов"
 L["2 days"] = "2 дня"
 L["7 days"] = "7 дней"
 L["NEVER MADE AS SUB-CRAFTS"] = "НИКОГДА НЕ ДЕЛАТЬ КАК ЗАГОТОВКИ"

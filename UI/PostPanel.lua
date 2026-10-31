@@ -740,7 +740,7 @@ function PostPanel:Build()
 
     -- How long listings stay up (a player asked, 2026-10-14): the same
     -- account wide postDuration as the Post tab's, so a pick in either shows
-    -- in both. Forever's auction house offers 2, 8 and 24 hours.
+    -- in both. Retail's auction house offers 12, 24 and 48 hours.
     local durationWidth = 70
     if Theme.MeasureText then
         for _, option in ipairs(ns.Posting.DURATIONS) do

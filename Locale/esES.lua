@@ -320,6 +320,7 @@ L["Profit as a share of the sale price."] = "La ganancia como parte del precio d
 L["PRICE AGE"] = "EDAD DE LOS PRECIOS"
 L["12 hours"] = "12 horas"
 L["24 hours"] = "24 horas"
+L["48 hours"] = "48 horas"
 L["2 days"] = "2 días"
 L["7 days"] = "7 días"
 L["NEVER MADE AS SUB-CRAFTS"] = "NUNCA FABRICADOS COMO PRODUCTO INTERMEDIO"

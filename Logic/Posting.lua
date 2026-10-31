@@ -71,13 +71,14 @@ local CHECK_ALL_WAIT = 8
 -- the whole book). Such an item is left to that search.
 local CHECK_ALL_FAR_UNDER = 0.5
 
--- Confirmed against Blizzard's own Sell tab on Forever, which offers 2, 8 and
--- 24 hours: this is a Classic auction house, not retail's 12/24/48. The choice
--- is the length every listing goes up for, and sets its deposit.
+-- Retail's auction house offers 12, 24 and 48 hours (Forever's, a Classic
+-- one, 2, 8 and 24). The values are the same three the game takes; only the
+-- lengths behind them differ. The choice is the length every listing goes up
+-- for, and sets its deposit. Retail only (docs/retail-differences.md).
 local DURATIONS = {
-    { text = L["2 hours"], value = 1 },
-    { text = L["8 hours"], value = 2 },
-    { text = L["24 hours"], value = 3 },
+    { text = L["12 hours"], value = 1 },
+    { text = L["24 hours"], value = 2 },
+    { text = L["48 hours"], value = 3 },
 }
 
 Posting.DURATIONS = DURATIONS
@@ -860,7 +861,7 @@ function Posting:NormalisePrice(price, isCommodity)
     price = tonumber(price)
     if not price or price < 1 then return nil end
     price = math.floor(price)
-    if isCommodity == false then return Util.RoundToSilver(price) end
+    if (isCommodity == false or Util.WHOLE_SILVER_ONLY == true) then return Util.RoundToSilver(price) end
     return price
 end
 
@@ -1553,7 +1554,7 @@ function Posting:Post(itemID, quantity, unitPrice, byHand)
     -- which is the internal error the client shows for a listing that never
     -- happens. A price arriving here from a caller has not necessarily been
     -- through the chooser, so it is rounded again rather than trusted.
-    if not isCommodity and not Util.IsWholeSilver(unitPrice) then
+    if (isCommodity == false or Util.WHOLE_SILVER_ONLY == true) and not Util.IsWholeSilver(unitPrice) then
         local rounded = Util.RoundToSilver(unitPrice)
 
         ns.Print(L.Format("item auctions only take whole silver, so %s becomes %s",

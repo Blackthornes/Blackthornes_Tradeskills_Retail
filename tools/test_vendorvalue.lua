@@ -74,6 +74,8 @@ ns.Scanner = { GetCommodityStatus = function() return true end }
 ns.Auctions = { GetRoom = function() return nil, 0, 0, 0, 0, 0 end }
 
 assert(loadfile(lfs_cwd .. "/Core/Util.lua"))("Blackthornes_TS", ns)
+-- Forever's copper prices for stacks; Retail's whole silver is in test_wholesilver.lua.
+ns.Util.WHOLE_SILVER_ONLY = false
 assert(loadfile(lfs_cwd .. "/Data/Prices.lua"))("Blackthornes_TS", ns)
 assert(loadfile(lfs_cwd .. "/Logic/Cost.lua"))("Blackthornes_TS", ns)
 assert(loadfile(lfs_cwd .. "/Logic/Profit.lua"))("Blackthornes_TS", ns)
