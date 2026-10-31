@@ -20,6 +20,16 @@ local Disenchant = ns.NewModule("Disenchant")
 
 local Util = ns.Util
 
+-- Retail (this copy only): no built-in table. Retail's items break into
+-- what their own expansion gives, so the Classic table below would be wrong
+-- for almost everything, and an item's chances come from your own breaks
+-- alone (your own results for items like it, kept by quality and the
+-- expansion the item is from, or for that item itself). Until there are
+-- enough, an item has no disenchant value rather than a guessed one, and no
+-- Enchanting skill is named for it. Forever's tests set this to false.
+-- See docs/retail-differences.md.
+Disenchant.OWN_RESULTS_ONLY = true
+
 --------------------------------------------------------------------------------
 -- The materials
 --------------------------------------------------------------------------------
@@ -254,7 +264,7 @@ end
 local function Remember(itemID)
     if not Util.HasFunction("C_Item.GetItemInfo") then return nil end
 
-    local ok, name, _, quality, itemLevel, _, _, _, _, equipLoc, _, sellPrice, classID =
+    local ok, name, _, quality, itemLevel, _, _, _, _, equipLoc, _, sellPrice, classID, _, _, expansionID =
         pcall(C_Item.GetItemInfo, itemID)
 
     if not ok or not name or type(quality) ~= "number" or type(itemLevel) ~= "number" then
@@ -274,7 +284,10 @@ local function Remember(itemID)
     local facts = { n = name, q = quality, l = itemLevel, c = classID, e = equipLoc,
                     v = type(sellPrice) == "number" and sellPrice or 0,
                     vt = tooltipRead and TOOLTIP_READ or nil,
-                    ch = charges }
+                    ch = charges,
+                    -- The expansion the item is from (Retail): it decides
+                    -- what a disenchant gives there.
+                    x = type(expansionID) == "number" and expansionID or nil }
     Store()[itemID] = facts
     waiting[itemID], attempts[itemID] = nil, nil
 
@@ -285,6 +298,9 @@ end
 
 -- Items whose saved price was read again this session for the tooltip's.
 local tooltipRetried = {}
+
+-- Items read again this session for their expansion (Retail).
+local expansionRetried = {}
 
 -- Only consumables carry charges worth knowing about (oils, mostly), so
 -- only they are read again for them: every item at once would crowd the
@@ -371,12 +387,20 @@ function Disenchant:GetItemFacts(itemID)
     local known = Store()[itemID] or Fetch(itemID)
     if not known then return nil end
 
+    -- Read before the expansion was kept: read once more for it, keeping
+    -- what is known in the meantime.
+    if Disenchant.OWN_RESULTS_ONLY and known.x == nil and not expansionRetried[itemID] then
+        expansionRetried[itemID] = true
+        known = Fetch(itemID) or known
+    end
+
     return {
         quality = known.q,
         itemLevel = known.l,
         classID = known.c,
         isWeapon = known.c == CLASS_WEAPON,
         equipLoc = known.e,
+        expansion = known.x,
     }
 end
 
@@ -424,6 +448,7 @@ end
 --- Forget what was read about items (for tests).
 function Disenchant:_ForgetItems()
     sessionFacts, waiting, attempts, arrived, tooltipRetried = {}, {}, {}, {}, {}
+    expansionRetried = {}
     gearMemo = {}
     if ns.db then ns.db.itemFacts = {} end
     budget.second, budget.used = nil, 0
@@ -514,11 +539,41 @@ local KIND_WORDS = {
     [4] = { weapon = L["purple weapon"], armor = L["purple armor"], any = L["purple items"] },
 }
 
+--- Retail's key for pooling results: the quality and the expansion the item
+--- is from ("2:any:x10"), or, for an item read before the expansion was
+--- kept, its item level in tens ("2:any:i3" for 30 to 39).
+function Disenchant.RetailKey(facts)
+    if type(facts.expansion) == "number" then
+        return ("%d:any:x%d"):format(facts.quality, facts.expansion)
+    end
+    return ("%d:any:i%d"):format(facts.quality, math.floor((facts.itemLevel or 0) / 10))
+end
+
+--- An expansion's name as the client gives it, or nil.
+local function ExpansionName(expansionID)
+    local name = rawget(_G, "EXPANSION_NAME" .. tostring(expansionID))
+    if type(name) == "string" and name ~= "" then return name end
+    return nil
+end
+
 --- A key from BandKey in words: "green armor, item level 21 to 25".
 function Disenchant:DescribeKey(key)
     local quality, kind, top = tostring(key or ""):match("^(%d):(%a+):(%w+)$")
     quality = tonumber(quality)
     if not quality or not COLOUR_WORD[quality] then return tostring(key) end
+
+    -- Retail's keys: by expansion, else by item level in tens.
+    local expansion = top and tonumber(top:match("^x(%d+)$"))
+    local tens = top and tonumber(top:match("^i(%d+)$"))
+    if expansion or tens then
+        local what = KIND_WORDS[quality][kind] or KIND_WORDS[quality].any
+        if expansion then
+            local name = ExpansionName(expansion)
+            return name and L.Format("%s, %s", what, name) or what
+        end
+        local from = math.max(1, tens * 10)
+        return L.Format("%s, %s", what, L.Format("item level %d to %d", from, tens * 10 + 9))
+    end
 
     local bands = quality == 2 and UNCOMMON or quality == 3 and RARE or EPIC
     local upTo = top == "top" and math.huge or tonumber(top)
@@ -560,7 +615,10 @@ function Disenchant:GetOutcomes(itemID)
     local outcomes = {}
     local band
 
-    if facts.quality == 2 then
+    if self.OWN_RESULTS_ONLY then
+        -- Retail: nothing built in. Nothing until your own breaks say.
+        facts.key = self.RetailKey(facts)
+    elseif facts.quality == 2 then
         band = Band(UNCOMMON, level)
         local dustChance, essenceChance, shardChance =
             band.chances[1], band.chances[2], band.chances[3]
@@ -599,9 +657,13 @@ function Disenchant:GetOutcomes(itemID)
         }
     end
 
-    facts.skill = Band(SKILL, level).skill
-    facts.key = BandKey(facts, band)
-    facts.source = "table"
+    if self.OWN_RESULTS_ONLY then
+        facts.source = "none"
+    else
+        facts.skill = Band(SKILL, level).skill
+        facts.key = BandKey(facts, band)
+        facts.source = "table"
+    end
     facts.casts = 0
     facts.byItem = nil
 
@@ -714,9 +776,51 @@ function Disenchant:GetValue(itemID)
     return math.floor(value + 0.5), nil, breakdown
 end
 
---- Is this item an enchanting material a disenchant can give?
+-- The game's item class and kind for enchanting materials (trade goods,
+-- Enchanting).
+local CLASS_TRADE_GOODS, SUBCLASS_ENCHANTING = 7, 12
+
+--- Is this item an enchanting material a disenchant can give? On Retail,
+--- also any the game files as an enchanting trade good: each expansion has
+--- its own, and Classic's list above names only Classic's.
 function Disenchant:IsMaterial(itemID)
-    return MATERIAL_NAME[itemID] ~= nil
+    if MATERIAL_NAME[itemID] ~= nil then return true end
+    if not (self.OWN_RESULTS_ONLY and type(itemID) == "number") then return false end
+    if not Util.HasFunction("C_Item.GetItemInfoInstant") then return false end
+    local ok, classID, subclassID = pcall(function()
+        local _, _, _, _, _, c, s = C_Item.GetItemInfoInstant(itemID)
+        return c, s
+    end)
+    return ok and classID == CLASS_TRADE_GOODS and subclassID == SUBCLASS_ENCHANTING
+end
+
+--- Every material to offer in a list: Classic's, then on Retail any other
+--- your own disenchants have given, by item ID.
+-- @return { { itemID, name, kind }, ... }, a fresh list
+function Disenchant:Materials()
+    local list = {}
+    for index, material in ipairs(self.MATERIALS) do list[index] = material end
+    if not self.OWN_RESULTS_ONLY then return list end
+
+    local log = ns.DisenchantLog
+    local found = {}
+    local ok, records = pcall(function() return log and log:GetTable().items end)
+    for _, record in pairs(ok and type(records) == "table" and records or {}) do
+        if type(record) == "table" and type(record.got) == "table" then
+            for materialID in pairs(record.got) do
+                if type(materialID) == "number" and not MATERIAL_NAME[materialID] then
+                    found[materialID] = true
+                end
+            end
+        end
+    end
+    local extra = {}
+    for materialID in pairs(found) do extra[#extra + 1] = materialID end
+    table.sort(extra)
+    for _, materialID in ipairs(extra) do
+        list[#list + 1] = { itemID = materialID, name = self:ItemName(materialID) }
+    end
+    return list
 end
 
 --- A material's name, whether or not the client has it cached.
@@ -1319,6 +1423,9 @@ local function Report(input)
 
     if facts.source == "yours" then
         ns.Print(L.Format("  from %s", Disenchant:YoursPhrase(facts)))
+    elseif facts.source == "none" then
+        ns.Print("  " .. L.Format("learning %s: %d of %d", Disenchant:DescribeKey(facts.key),
+            facts.casts or 0, Disenchant.LEARN_AFTER))
     else
         ns.Print(L.Format("  from the built-in table (you've done %d, and your own results take over at %d)",
             facts.casts or 0, Disenchant.LEARN_AFTER))

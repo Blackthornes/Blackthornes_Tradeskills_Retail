@@ -737,9 +737,16 @@ local function UpdateBagDetail(entry)
     local breakdown = entry.breakdown or {}
     local facts = breakdown.facts or {}
 
-    detail.subtitle:SetText(L.Format(facts.isWeapon and L["Item level %d %s weapon. Needs Enchanting about %d."]
-            or L["Item level %d %s armor. Needs Enchanting about %d."],
-        facts.itemLevel or 0, QualityWord(facts.qualityName), facts.skill or 0))
+    if facts.skill then
+        detail.subtitle:SetText(L.Format(facts.isWeapon and L["Item level %d %s weapon. Needs Enchanting about %d."]
+                or L["Item level %d %s armor. Needs Enchanting about %d."],
+            facts.itemLevel or 0, QualityWord(facts.qualityName), facts.skill))
+    else
+        -- Retail names no skill (Logic/Disenchant.lua, OWN_RESULTS_ONLY).
+        detail.subtitle:SetText(L.Format(facts.isWeapon and L["Item level %d %s weapon."]
+                or L["Item level %d %s armor."],
+            facts.itemLevel or 0, QualityWord(facts.qualityName)))
+    end
     detail.subtitle:SetTextColor(Theme.Unpack("muted"))
 
     DrawOutcomes(detail, breakdown)
@@ -749,6 +756,8 @@ local function UpdateBagDetail(entry)
         SetLine(lines[1], L["Disenchant value"],
             entry.partial and L.Format("%s  or more", Util.FormatMoney(entry.value)) or Util.FormatMoney(entry.value),
             entry.beatsSale and "profit" or "text")
+    elseif facts.source == "none" then
+        SetLine(lines[1], L["Disenchant value"], L["unknown"], "dim")
     else
         SetLine(lines[1], L["Disenchant value"], L["materials not scanned"], "dim")
     end
@@ -791,6 +800,9 @@ local function UpdateBagDetail(entry)
     elseif entry.value then
         detail.verdict:SetText(L["Nothing to compare it with, since it has no sale price."])
         detail.verdict:SetTextColor(Theme.Unpack("muted"))
+    elseif facts.source == "none" then
+        detail.verdict:SetText(L["Break a few of these to learn what they give."])
+        detail.verdict:SetTextColor(Theme.Unpack("warn"))
     else
         detail.verdict:SetText(L["Scan the auction house to price its materials."])
         detail.verdict:SetTextColor(Theme.Unpack("warn"))
@@ -799,10 +811,12 @@ local function UpdateBagDetail(entry)
     local note
     if facts.source == "yours" then
         note = L.Format("Chances come from %s.", ns.Disenchant:YoursPhrase(facts))
+    elseif facts.source == "none" then
+        note = ""
     else
         note = L["Rough chances for now. They get better as you disenchant."]
     end
-    if not entry.soulbound then
+    if not entry.soulbound and note ~= "" then
         note = note .. L[" If it is already bound to you, only a vendor will buy it."]
     end
     detail.note:SetText(note)
@@ -862,6 +876,7 @@ local function UpdateMaterialDetail(entry)
         local facts = entry.breakdown and entry.breakdown.facts or {}
         detail.note:SetText(facts.source == "yours"
             and L.Format("Chances come from %s.", ns.Disenchant:YoursPhrase(facts))
+            or facts.source == "none" and L["Break a few of these to learn what they give."]
             or L["Rough chances for now. They get better as you disenchant."])
         SetAction(L["Queue one"])
         return
@@ -936,9 +951,15 @@ local function UpdateDetail(entry)
         who = L.Format("Your best is %d (%s).", entry.enchanterSkill or 0, entry.enchanter or "?")
     end
 
-    detail.subtitle:SetText(L.Format(facts.isWeapon and L["Item level %d %s weapon. Needs Enchanting about %d. %s"]
-            or L["Item level %d %s armor. Needs Enchanting about %d. %s"],
-        facts.itemLevel or 0, QualityWord(facts.qualityName), facts.skill or 0, who))
+    if facts.skill then
+        detail.subtitle:SetText(L.Format(facts.isWeapon and L["Item level %d %s weapon. Needs Enchanting about %d. %s"]
+                or L["Item level %d %s armor. Needs Enchanting about %d. %s"],
+            facts.itemLevel or 0, QualityWord(facts.qualityName), facts.skill, who))
+    else
+        detail.subtitle:SetText(L.Format(facts.isWeapon and L["Item level %d %s weapon."]
+                or L["Item level %d %s armor."],
+            facts.itemLevel or 0, QualityWord(facts.qualityName)))
+    end
     detail.subtitle:SetTextColor(Theme.Unpack(entry.canDisenchant == true and "muted" or "loss"))
 
     DrawOutcomes(detail, breakdown)
@@ -965,6 +986,8 @@ local function UpdateDetail(entry)
     local note
     if facts.source == "yours" then
         note = L.Format("Chances come from %s.", ns.Disenchant:YoursPhrase(facts))
+    elseif facts.source == "none" then
+        note = L["Break a few of these to learn what they give."]
     else
         note = L["These are the usual chances. It's an average, so one disenchant can give more or less."]
     end
@@ -1369,7 +1392,8 @@ local function ApplyView()
     -- The material picker, its names as the client gives them.
     if isMaterial then
         local options = {}
-        for _, material in ipairs(ns.Disenchant.MATERIALS) do
+        local materials = ns.Disenchant.Materials and ns.Disenchant:Materials() or ns.Disenchant.MATERIALS
+        for _, material in ipairs(materials) do
             options[#options + 1] = { value = material.itemID, text = ns.Disenchant:ItemName(material.itemID) or material.name }
         end
         widgets.material:SetOptions(options)

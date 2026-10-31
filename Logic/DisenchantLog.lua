@@ -553,7 +553,8 @@ local function Report(input)
     if (input or ""):lower() == "reset" then
         ns.db.disenchantLog = nil
         DisenchantLog.version = (DisenchantLog.version or 0) + 1
-        ns.Print(L["your recorded disenchants are cleared, so values come from the built-in table again"])
+        ns.Print(ns.Disenchant.OWN_RESULTS_ONLY and L["your recorded disenchants are cleared"]
+            or L["your recorded disenchants are cleared, so values come from the built-in table again"])
         if ns.UI and ns.UI.RefreshActiveTab then ns.UI:RefreshActiveTab() end
         return
     end

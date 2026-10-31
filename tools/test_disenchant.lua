@@ -125,6 +125,8 @@ ns.Inventory = {
 
 assert(loadfile(lfs_cwd .. "/Logic/SkillUp.lua"))("Blackthornes_TS", ns)
 assert(loadfile(lfs_cwd .. "/Logic/Disenchant.lua"))("Blackthornes_TS", ns)
+-- Forever's built-in table (Retail uses your own breaks only).
+ns.Disenchant.OWN_RESULTS_ONLY = false
 assert(loadfile(lfs_cwd .. "/Logic/Profit.lua"))("Blackthornes_TS", ns)
 
 ns.SkillUp.GetForRecipe = function() return nil end

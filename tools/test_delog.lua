@@ -106,6 +106,8 @@ ns.Inventory = { GetBagCounts = function()
 end }
 
 assert(loadfile(lfs_cwd .. "/Logic/Disenchant.lua"))("Blackthornes_TS", ns)
+-- Forever's built-in table (Retail uses your own breaks only).
+ns.Disenchant.OWN_RESULTS_ONLY = false
 assert(loadfile(lfs_cwd .. "/Logic/DisenchantLog.lua"))("Blackthornes_TS", ns)
 
 local Disenchant, Log = ns.Disenchant, ns.DisenchantLog
