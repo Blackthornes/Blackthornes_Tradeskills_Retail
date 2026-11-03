@@ -58,6 +58,7 @@ function SnipeView:SortedFinds()
     table.sort(rows, function(a, b)
         local x, y
         if key == "price" then x, y = a.price or 0, b.price or 0
+        elseif key == "worth" then x, y = a.worth or 0, b.worth or 0
         elseif key == "name" then x, y = ItemName(a.itemID), ItemName(b.itemID)
         else x, y = DealOf(a), DealOf(b) end
         if x == y then return (a.itemID or 0) < (b.itemID or 0) end
@@ -85,8 +86,32 @@ end
 -- How many are up and what one is worth go on the hover. The numbers are
 -- filled before anything about the item, so the item's name can never
 -- leave them blank (a find once showed its name and nothing else).
-local PRICE_X = -5        -- the Price heading's left edge, from the middle
+local AVERAGE_X = -5      -- the Average heading's left edge, from the middle
+local PRICE_X = 115       -- the Price heading's left edge, from the middle
 local DEAL_WIDTH = 110
+
+local SORT_ARROW = [[Interface\AddOns\Blackthornes_TS\Media\Frame\SortArrow]]
+
+--- A heading: its words, gold with the arrow beside them while it sorts
+--- (down for biggest first), the arrow on the inside of a right-hand one.
+function SnipeView.PaintHead(head, active, down)
+    head.label:SetText(head.text)
+    head.label:SetTextColor(Theme.Unpack(active and "accent" or "muted"))
+    local arrow = head.arrow
+    if not arrow then return end
+    arrow:SetShown(active and true or false)
+    if not active then return end
+    if down then arrow:SetTexCoord(0, 0.5625, 0, 1) else arrow:SetTexCoord(0, 0.5625, 1, 0) end
+    local width = Theme.TextWidth and Theme.TextWidth(head.label) or 0
+    if type(width) ~= "number" then width = 0 end
+    arrow:ClearAllPoints()
+    local justify = head.label.GetJustifyH and head.label:GetJustifyH() or "LEFT"
+    if justify == "RIGHT" then
+        arrow:SetPoint("RIGHT", head.label, "RIGHT", -math.ceil(width) - 2, 0)
+    else
+        arrow:SetPoint("LEFT", head.label, "LEFT", math.ceil(width) + 2, 0)
+    end
+end
 
 local function CreateRow(row)
     row.icon = Theme.CreateItemIcon(row, ICON_SIZE)
@@ -97,9 +122,14 @@ local function CreateRow(row)
     row.price = Theme.CreateLabel(row, "small", "text")
     row.price:SetPoint("LEFT", row, "CENTER", PRICE_X, 0)
     row.price:SetPoint("RIGHT", row.badge, "LEFT", -8, 0)
+    -- What one usually sells for (the worth the deal is worked out from),
+    -- so the gap to the price can be seen (the owner, 2026-11-03).
+    row.average = Theme.CreateLabel(row, "small", "text")
+    row.average:SetPoint("LEFT", row, "CENTER", AVERAGE_X, 0)
+    row.average:SetPoint("RIGHT", row, "CENTER", PRICE_X - 8, 0)
     row.name = Theme.CreateLabel(row, "small", "text")
     row.name:SetPoint("LEFT", row, "LEFT", 8 + ICON_SIZE + 8, 0)
-    row.name:SetPoint("RIGHT", row, "CENTER", PRICE_X - 10, 0)
+    row.name:SetPoint("RIGHT", row, "CENTER", AVERAGE_X - 10, 0)
     row.edge = Theme.AccentStripe(row, 3)
     row.edge:Hide()
 end
@@ -129,6 +159,7 @@ end
 local function UpdateRow(row, find)
     if not find then return end
     row.price:SetText(Colored(find.price))
+    row.average:SetText(Colored(find.worth))
 
     local pending = Snipe().pending
     if IsPending(find) then
@@ -150,8 +181,11 @@ local function UpdateRow(row, find)
     Theme.SetItemIcon(row.icon, find.itemID)
     local label = PlainName(find.itemID)
     if Theme.SetRowName then Theme.SetRowName(row.name, label) else row.name:SetText(label) end
-    local r, g, b = Util.GetItemQualityColor and Util.GetItemQualityColor(find.itemID)
-    if not r then r, g, b = Theme.Unpack("text") end
+    -- Called on its own line: "f and f(x)" keeps only the first of the three
+    -- colours, and SetTextColor(r, nil, nil) is a Lua error on Retail.
+    local r, g, b
+    if Util.GetItemQualityColor then r, g, b = Util.GetItemQualityColor(find.itemID) end
+    if not (r and g and b) then r, g, b = Theme.Unpack("text") end
     row.name:SetTextColor(r, g, b)
 end
 
@@ -278,6 +312,13 @@ function SnipeView:BuildStrip(body, topAnchor)
         local label = Theme.CreateLabel(button, "tiny", "muted", justify)
         label:SetPoint(justify == "RIGHT" and "RIGHT" or "LEFT", button, justify == "RIGHT" and "RIGHT" or "LEFT", 0, 0)
         button.label, button.key, button.text = label, key, text
+        -- The house's gold sort arrow, as every other sortable list has it
+        -- (a "v" or "^" after the words read as part of the heading).
+        local arrow = button:CreateTexture(nil, "OVERLAY")
+        arrow:SetSize(8, 7)
+        pcall(arrow.SetTexture, arrow, SORT_ARROW)
+        arrow:Hide()
+        button.arrow = arrow
         button:SetWidth(90)
         button:SetPoint(point, cols, point, x, 0)
         button:SetScript("OnClick", function() self:SortBy(key) end)
@@ -285,8 +326,9 @@ function SnipeView:BuildStrip(body, topAnchor)
     end
     self.heads = {
         Head("name", L["Item"], "LEFT", 8 + ICON_SIZE + 8),
-        Head("price", L["Price"], "CENTER", 40),
-        Head("deal", L["Deal"], "RIGHT", -8, "RIGHT"),
+        Head("worth", L["Average"], "CENTER", AVERAGE_X + 45),
+        Head("price", L["Price"], "CENTER", PRICE_X + 45),
+        Head("deal", L["Under Average"], "RIGHT", -8, "RIGHT"),
     }
 end
 
@@ -396,9 +438,7 @@ function SnipeView:Refresh(force)
 
     self.head.text:SetText((self:StripOpen() and "- " or "+ ") .. L["SNIPE SETTINGS"])
     for _, head in ipairs(self.heads) do
-        local arrow = ""
-        if head.key == self.sortKey then arrow = self.sortDown and " v" or " ^" end
-        head.label:SetText(head.text .. arrow)
+        SnipeView.PaintHead(head, head.key == self.sortKey, self.sortDown)
     end
     Lock(self.cap, running)
     self.pct.editBox:EnableMouse(not running)

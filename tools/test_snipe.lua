@@ -112,4 +112,67 @@ do
     assert(not source:find('value = "%w+", label = L%['), "dropdown options use text, not label")
 end
 
+-- 9. The bell rings once a find: another search's rows (the player's own,
+--    or another addon's) are never taken as ours, and a find already told
+--    rings again only when it gets cheaper.
+assert(Snipe.IsOurs({ { itemKey = { itemID = 10 } } }, { [10] = 1 }) == true)
+assert(Snipe.IsOurs({ { itemKey = { itemID = 10 } }, { itemKey = { itemID = 99 } } }, { [10] = 1 }) == false,
+    "a row for an item we did not ask about is someone else's search")
+assert(Snipe.IsOurs({}, { [10] = 1 }) == true, "nothing listed is still our answer")
+do
+    local timers = {}
+    C_Timer = { After = function(_, fn) timers[#timers + 1] = fn end }
+    local rows = {}
+    local sent = 0
+    ns.Util.HasFunction = function() return true end
+    C_Item = { GetItemInfoInstant = function(id) return id, nil, nil, nil, nil, 7 end }
+    C_AuctionHouse = {
+        MakeItemKey = function(id) return { itemID = id } end,
+        SearchForItemKeys = function() sent = sent + 1 end,
+        GetBrowseResults = function() return rows end,
+    }
+    ns.AHQueue = { PRIORITY = { scan = 90 }, Request = function(_, req) req.send() end }
+    ns.Prices = {
+        GetValue = function() return 100000 end,
+        GetTable = function() return { [10] = { quantity = 3 } } end,
+    }
+    ns.Posting = nil
+    local rang = 0
+    PlaySoundFile = function() rang = rang + 1 end
+    settings.snipeCap, settings.snipePct, settings.snipeWatch, settings.snipeSound = 1000000, 70, "priced", true
+    Snipe.running = false
+    Snipe:Start()
+    assert(sent >= 1, "the search went out")
+    -- Someone else's search comes in first: ignored, nothing dropped.
+    rows = { { itemKey = { itemID = 99 }, minPrice = 5, totalQuantity = 1 } }
+    Snipe:OnBrowseResults()
+    assert(rang == 0 and #Snipe:Finds() == 0, "another search's rows are not ours")
+    -- Ours: a deal, the bell rings once.
+    rows = { { itemKey = { itemID = 10 }, minPrice = 400, totalQuantity = 3 } }
+    Snipe:OnBrowseResults()
+    assert(#Snipe:Finds() == 1 and rang == 1, "a new find rings")
+    -- The same find on the next pass: no bell.
+    Snipe:Next()
+    Snipe:OnBrowseResults()
+    assert(#Snipe:Finds() == 1 and rang == 1, "the same find does not ring again")
+    -- Cheaper: rings.
+    rows = { { itemKey = { itemID = 10 }, minPrice = 300, totalQuantity = 3 } }
+    Snipe:Next()
+    Snipe:OnBrowseResults()
+    assert(rang == 2, "a cheaper price rings")
+    Snipe:Stop()
+    C_Timer, C_Item, C_AuctionHouse, PlaySoundFile, ns.AHQueue = nil, nil, nil, nil, nil
+end
+
+-- 10. The pool looks at what the last scan saw for sale first, then the
+--     items worth most, not the oldest item IDs.
+do
+    local list = Snipe.SortPool({
+        { id = 1, worth = 900, listed = false },
+        { id = 2, worth = 100, listed = true },
+        { id = 3, worth = 500, listed = true },
+    })
+    assert(list[1].id == 3 and list[2].id == 2 and list[3].id == 1, "listed first, then by worth")
+end
+
 print("test_snipe: all passed")

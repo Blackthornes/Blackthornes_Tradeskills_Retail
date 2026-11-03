@@ -54,6 +54,9 @@ Snipe.finds = {}
 Snipe.version = 0
 Snipe.pending = nil
 Snipe.armed = nil
+-- The price each find last rang the bell at, this session: the bell rings
+-- again only for a new item or a lower price.
+Snipe.told = {}
 
 local pool, cursor, waiting, building, session = {}, 1, nil, false, 0
 
@@ -203,16 +206,34 @@ function Snipe:BuildPool(done)
         local last = math.min(#ids, at + self.SLICE - 1)
         for i = at, last do
             local worth = self:WorthOf(ids[i], mode)
-            if worth then pool[#pool + 1] = { id = ids[i], worth = worth } end
+            if worth then
+                local record = table_[ids[i]]
+                local listed = type(record) == "table" and (tonumber(record.quantity) or 0) > 0
+                pool[#pool + 1] = { id = ids[i], worth = worth, listed = listed }
+            end
         end
         at = last + 1
         if at > #ids then
             building = false
+            Snipe.SortPool(pool)
             return done()
         end
         After(0, Step)
     end
     Step()
+end
+
+--- The order a session looks in: what the last scan saw up for sale
+--- first, then the items worth most. Sorted by item ID, a long pool spent
+--- its first hour on the oldest items in the game.
+function Snipe.SortPool(list)
+    table.sort(list, function(a, b)
+        local al, bl = a.listed == true, b.listed == true
+        if al ~= bl then return al end
+        if a.worth ~= b.worth then return a.worth > b.worth end
+        return a.id < b.id
+    end)
+    return list
 end
 
 --------------------------------------------------------------------------
@@ -235,7 +256,7 @@ function Snipe:Start()
     end
     if not AuctionOpen() then return end
     session = session + 1
-    self.running, self.spent, self.finds = true, 0, {}
+    self.running, self.spent, self.finds, self.told = true, 0, {}, {}
     self.pending, self.armed, waiting = nil, nil, nil
     Moved()
     self:BuildPool(function() Snipe:Next() end)
@@ -307,6 +328,7 @@ function Snipe:Next()
         send = function()
             if mineSession ~= session or not Snipe.running then return false end
             local ok = pcall(C_AuctionHouse.SearchForItemKeys, keys, {})
+            if ok then mine.sent = Now() end
             return ok
         end,
         onGiveUp = function()
@@ -325,13 +347,36 @@ function Snipe:Later()
     end)
 end
 
+--- Are these rows the answer to our search? Ours names only the items in
+--- the batch, so any other item means the rows are someone else's search
+--- (the player's own, or another addon's). Taking those as ours dropped the
+--- batch's finds, and the next pass found them again and rang the bell.
+function Snipe.IsOurs(rows, batch)
+    for _, row in ipairs(rows) do
+        local key = type(row) == "table" and row.itemKey
+        local id = type(key) == "table" and key.itemID
+        if not (id and batch[id]) then return false end
+    end
+    return true
+end
+
+--- Should a find ring the bell? Only a new item, or one cheaper than when
+--- it last rang.
+function Snipe:ShouldTell(find)
+    local told = self.told[find.itemID]
+    if told and find.price >= told then return false end
+    self.told[find.itemID] = find.price
+    return true
+end
+
 --- The scanner's browse hook: the rows of our search are ready.
 function Snipe:OnBrowseResults()
     local mine = waiting
-    if not (self.running and mine) then return end
+    if not (self.running and mine and mine.sent) then return end
     if not (C_AuctionHouse and C_AuctionHouse.GetBrowseResults) then return end
     local ok, rows = pcall(C_AuctionHouse.GetBrowseResults)
     if not (ok and type(rows) == "table") then return end
+    if not Snipe.IsOurs(rows, mine.batch) then return end
 
     local cheapest = {}
     for _, row in ipairs(rows) do
@@ -355,19 +400,18 @@ function Snipe:OnBrowseResults()
     local pct = self:Percent()
     local kind = self:Watch()
     local kept, fresh = {}, false
-    local had = {}
-    for _, find in ipairs(self.finds) do had[find.itemID] = find end
     for _, find in ipairs(self.finds) do
         if not mine.batch[find.itemID] then kept[#kept + 1] = find end
     end
     for id, hit in pairs(cheapest) do
         local worth = mine.batch[id]
         if Snipe.IsDeal(hit.price, worth, pct) then
-            kept[#kept + 1] = {
+            local find = {
                 itemID = id, price = hit.price, qty = hit.qty, worth = worth,
                 deal = Snipe.Deal(hit.price, worth), kind = kind,
             }
-            if not had[id] then fresh = true end
+            kept[#kept + 1] = find
+            if self:ShouldTell(find) then fresh = true end
         end
     end
     table.sort(kept, function(a, b)
