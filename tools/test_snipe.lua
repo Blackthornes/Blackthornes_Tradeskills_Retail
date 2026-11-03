@@ -101,4 +101,15 @@ assert(started and searched == nil, "a commodity starts a stack purchase")
 C_Item, C_AuctionHouse = nil, nil
 Snipe.running, Snipe.pending = false, nil
 
+-- The Watch box's options carry `text`, the words Widgets.CreateDropdown
+-- shows; written as `label` the box and its menu opened empty.
+do
+    local file = assert(io.open(lfs_cwd .. "/UI/SnipeView.lua", "r"))
+    local source = file:read("*a")
+    file:close()
+    assert(source:find('value = "priced", text = L%["Priced Items"%]'), "Watch shows Priced Items")
+    assert(source:find('value = "disenchant", text = L%["To Disenchant"%]'), "Watch shows To Disenchant")
+    assert(not source:find('value = "%w+", label = L%['), "dropdown options use text, not label")
+end
+
 print("test_snipe: all passed")
