@@ -88,6 +88,29 @@ end
 local PRICE_X = -5        -- the Price heading's left edge, from the middle
 local DEAL_WIDTH = 110
 
+local SORT_ARROW = [[Interface\AddOns\Blackthornes_TS\Media\Frame\SortArrow]]
+
+--- A heading: its words, gold with the arrow beside them while it sorts
+--- (down for biggest first), the arrow on the inside of a right-hand one.
+function SnipeView.PaintHead(head, active, down)
+    head.label:SetText(head.text)
+    head.label:SetTextColor(Theme.Unpack(active and "accent" or "muted"))
+    local arrow = head.arrow
+    if not arrow then return end
+    arrow:SetShown(active and true or false)
+    if not active then return end
+    if down then arrow:SetTexCoord(0, 0.5625, 0, 1) else arrow:SetTexCoord(0, 0.5625, 1, 0) end
+    local width = Theme.TextWidth and Theme.TextWidth(head.label) or 0
+    if type(width) ~= "number" then width = 0 end
+    arrow:ClearAllPoints()
+    local justify = head.label.GetJustifyH and head.label:GetJustifyH() or "LEFT"
+    if justify == "RIGHT" then
+        arrow:SetPoint("RIGHT", head.label, "RIGHT", -math.ceil(width) - 2, 0)
+    else
+        arrow:SetPoint("LEFT", head.label, "LEFT", math.ceil(width) + 2, 0)
+    end
+end
+
 local function CreateRow(row)
     row.icon = Theme.CreateItemIcon(row, ICON_SIZE)
     row.icon:SetPoint("LEFT", row, "LEFT", 8, 0)
@@ -281,6 +304,13 @@ function SnipeView:BuildStrip(body, topAnchor)
         local label = Theme.CreateLabel(button, "tiny", "muted", justify)
         label:SetPoint(justify == "RIGHT" and "RIGHT" or "LEFT", button, justify == "RIGHT" and "RIGHT" or "LEFT", 0, 0)
         button.label, button.key, button.text = label, key, text
+        -- The house's gold sort arrow, as every other sortable list has it
+        -- (a "v" or "^" after the words read as part of the heading).
+        local arrow = button:CreateTexture(nil, "OVERLAY")
+        arrow:SetSize(8, 7)
+        pcall(arrow.SetTexture, arrow, SORT_ARROW)
+        arrow:Hide()
+        button.arrow = arrow
         button:SetWidth(90)
         button:SetPoint(point, cols, point, x, 0)
         button:SetScript("OnClick", function() self:SortBy(key) end)
@@ -399,9 +429,7 @@ function SnipeView:Refresh(force)
 
     self.head.text:SetText((self:StripOpen() and "- " or "+ ") .. L["SNIPE SETTINGS"])
     for _, head in ipairs(self.heads) do
-        local arrow = ""
-        if head.key == self.sortKey then arrow = self.sortDown and " v" or " ^" end
-        head.label:SetText(head.text .. arrow)
+        SnipeView.PaintHead(head, head.key == self.sortKey, self.sortDown)
     end
     Lock(self.cap, running)
     self.pct.editBox:EnableMouse(not running)

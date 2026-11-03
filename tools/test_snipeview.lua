@@ -136,6 +136,12 @@ check("name in its colour, all three parts", row.name.color and row.name.color[3
 check("price under Price", Plain(row.price.text), "1s 50c")
 check("deal under Deal", row.badge.text, "83% under")
 check("the note hides", SV.empty.shown, false)
+for _, head in ipairs(SV.heads) do
+    if head.key == SV.sortKey then
+        check("the sorted heading is only its words", head.label.text, head.text)
+        check("and the gold arrow shows", head.arrow and head.arrow.shown, true)
+    end
+end
 row.scripts.OnEnter(row)
 check("hover says how many and the worth", Plain(tipLines[#tipLines]), "3 for sale. 1s 50c each, worth 9s 00c")
 
