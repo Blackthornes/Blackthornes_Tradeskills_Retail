@@ -11,7 +11,9 @@
 --   5. "One Window:" on the General page writes every save.
 --   6. Docked at the auction house, the drawer is the Auction House tab,
 --      with only the tabs that help there, Settings last; leaving gives
---      the drawer and the usual tabs back.
+--      the drawer and the usual tabs back. Another addon picked there
+--      leaves the drawer waiting in the one window (never out on its own,
+--      small, over the window); closing the one window brings it out.
 
 local GLOBALS = { "CreateFrame", "UIParent", "GameTooltip", "GetCursorPosition", "C_Timer",
     "UISpecialFrames", "tinsert", "GetTime", "time" }
@@ -126,7 +128,9 @@ local UI, Tabs, SW = ns.UI, ns.TSTabs, ns.SharedWindow
 local panel = { into = 0, outOf = 0, attach = 0 }
 ns.PostPanel = {
     Reflow = noop,
-    IntoOne = function(_, container) panel.into = panel.into + 1; panel.container = container end,
+    IntoOne = function(self, container)
+        panel.into = panel.into + 1; panel.container = container; self.waitingForOne = nil
+    end,
     OutOfOne = function() panel.outOf = panel.outOf + 1 end,
     Attach = function() panel.attach = panel.attach + 1 end,
 }
@@ -239,8 +243,28 @@ UI:SelectTab("prices")
 check("another tab there", UI.activeTab == "prices" and UI.ahTabStrip.selected == "prices"
     and not UI.ahContainer:IsShown())
 UI:SelectTab("auctionhouse")
+SW:Join({ key = "farmer", order = 1, name = "Farmer", db = function() return {} end,
+    host = { enter = noop, leave = noop } })
+local attached = panel.attach
+SW.Pick("farmer")
+check("another addon picked: the drawer waits in the one window", panel.outOf == 1
+    and panel.attach == attached and ns.PostPanel.waitingForOne == true)
+SW.Pick("tradeskills")
+check("Tradeskills picked again: the drawer is the tab again", panel.into == 2
+    and Tabs.atAuction and not ns.PostPanel.waitingForOne)
+SW.Pick("farmer")
+ns.Scanner.isAuctionHouseOpen = true
+hub.frame:Hide()
+check("the one window closed: the drawer comes out on its own", panel.attach == attached + 1
+    and not ns.PostPanel.waitingForOne)
+ns.Scanner.isAuctionHouseOpen = false
+hub.frame:Show()
+SW.Pick("tradeskills")
+hub.entries.farmer = nil
+check("open again on the Auction House tab", Tabs.atAuction and panel.into == 3)
+UI:SelectTab("auctionhouse")
 SW.Left("auction")
-check("leaving hands the drawer back", not Tabs.atAuction and panel.outOf == 1)
+check("leaving hands the drawer back", not Tabs.atAuction and panel.outOf == 3)
 check("the usual tabs come back", UI.tabStrip:IsShown() and not UI.ahTabStrip:IsShown())
 check("on the tab picked before", UI.activeTab == "queue" and UI.tabStrip.selected == "queue")
 _G.AuctionHouseFrame = nil

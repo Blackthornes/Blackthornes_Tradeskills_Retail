@@ -86,9 +86,16 @@ end
 -- How many are up and what one is worth go on the hover. The numbers are
 -- filled before anything about the item, so the item's name can never
 -- leave them blank (a find once showed its name and nothing else).
-local AVERAGE_X = -5      -- the Average heading's left edge, from the middle
-local PRICE_X = 115       -- the Price heading's left edge, from the middle
-local DEAL_WIDTH = 110
+-- Columns hang from the right edge, so they fit the drawer at its own
+-- width beside the auction house as well as the wider one window (laid
+-- from the middle, Price and Under Average ran into each other there).
+local DEAL_WIDTH = 90
+local PRICE_WIDTH = 72
+local AVERAGE_WIDTH = 72
+local COLUMN_GAP = 8
+local DEAL_RIGHT = -8
+local PRICE_RIGHT = DEAL_RIGHT - DEAL_WIDTH - COLUMN_GAP
+local AVERAGE_RIGHT = PRICE_RIGHT - PRICE_WIDTH - COLUMN_GAP
 
 local SORT_ARROW = [[Interface\AddOns\Blackthornes_TS\Media\Frame\SortArrow]]
 
@@ -117,19 +124,19 @@ local function CreateRow(row)
     row.icon = Theme.CreateItemIcon(row, ICON_SIZE)
     row.icon:SetPoint("LEFT", row, "LEFT", 8, 0)
     row.badge = Theme.CreateLabel(row, "small", "muted", "RIGHT")
-    row.badge:SetPoint("RIGHT", row, "RIGHT", -8, 0)
+    row.badge:SetPoint("RIGHT", row, "RIGHT", DEAL_RIGHT, 0)
     row.badge:SetWidth(DEAL_WIDTH)
     row.price = Theme.CreateLabel(row, "small", "text")
-    row.price:SetPoint("LEFT", row, "CENTER", PRICE_X, 0)
-    row.price:SetPoint("RIGHT", row.badge, "LEFT", -8, 0)
+    row.price:SetPoint("RIGHT", row, "RIGHT", PRICE_RIGHT, 0)
+    row.price:SetWidth(PRICE_WIDTH)
     -- What one usually sells for (the worth the deal is worked out from),
     -- so the gap to the price can be seen (the owner, 2026-11-03).
     row.average = Theme.CreateLabel(row, "small", "text")
-    row.average:SetPoint("LEFT", row, "CENTER", AVERAGE_X, 0)
-    row.average:SetPoint("RIGHT", row, "CENTER", PRICE_X - 8, 0)
+    row.average:SetPoint("RIGHT", row, "RIGHT", AVERAGE_RIGHT, 0)
+    row.average:SetWidth(AVERAGE_WIDTH)
     row.name = Theme.CreateLabel(row, "small", "text")
     row.name:SetPoint("LEFT", row, "LEFT", 8 + ICON_SIZE + 8, 0)
-    row.name:SetPoint("RIGHT", row, "CENTER", AVERAGE_X - 10, 0)
+    row.name:SetPoint("RIGHT", row.average, "LEFT", -10, 0)
     row.edge = Theme.AccentStripe(row, 3)
     row.edge:Hide()
 end
@@ -306,7 +313,7 @@ function SnipeView:BuildStrip(body, topAnchor)
     local cols = CreateFrame("Frame", nil, body)
     cols:SetHeight(COLUMNS_HEIGHT)
     self.cols = cols
-    local function Head(key, text, point, x, justify)
+    local function Head(key, text, point, x, justify, width)
         local button = CreateFrame("Button", nil, cols)
         button:SetHeight(COLUMNS_HEIGHT)
         local label = Theme.CreateLabel(button, "tiny", "muted", justify)
@@ -319,16 +326,16 @@ function SnipeView:BuildStrip(body, topAnchor)
         pcall(arrow.SetTexture, arrow, SORT_ARROW)
         arrow:Hide()
         button.arrow = arrow
-        button:SetWidth(90)
+        button:SetWidth(width or 90)
         button:SetPoint(point, cols, point, x, 0)
         button:SetScript("OnClick", function() self:SortBy(key) end)
         return button
     end
     self.heads = {
         Head("name", L["Item"], "LEFT", 8 + ICON_SIZE + 8),
-        Head("worth", L["Average"], "CENTER", AVERAGE_X + 45),
-        Head("price", L["Price"], "CENTER", PRICE_X + 45),
-        Head("deal", L["Under Average"], "RIGHT", -8, "RIGHT"),
+        Head("worth", L["Average"], "RIGHT", AVERAGE_RIGHT, nil, AVERAGE_WIDTH),
+        Head("price", L["Price"], "RIGHT", PRICE_RIGHT, nil, PRICE_WIDTH),
+        Head("deal", L["Under Average"], "RIGHT", DEAL_RIGHT, "RIGHT", DEAL_WIDTH),
     }
 end
 
