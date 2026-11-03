@@ -45,6 +45,10 @@ Snipe.MOST_UNITS = 20
 Snipe.SLICE = 300
 -- Retail: Priced Items leaves gear out (see WorthOf).
 Snipe.PRICED_SKIPS_GEAR = true
+-- An average this many times the cheapest listing the last look at the
+-- book saw is not trusted: the book was mostly silly prices, so the
+-- "average" is theirs, and every real listing looks like a deal.
+Snipe.TRUST_GAP = 10
 
 Snipe.SOUND = [[Interface\AddOns\]] .. (ns.ADDON_NAME or "Blackthornes_TS") .. [[\Media\Sounds\snipe-bell-single.ogg]]
 
@@ -162,12 +166,37 @@ function Snipe:WorthOf(itemID, mode)
         local class = ItemClass(itemID)
         if class == 2 or class == 4 then return nil end
     end
+    -- Grey (poor) items are worth what a vendor pays, never an auction
+    -- price (the owner's rule), so there is nothing to snipe.
+    if Quality(itemID) == 0 then return nil end
     if not (ns.Prices and ns.Prices.GetValue) then return nil end
     local ok, value = pcall(ns.Prices.GetValue, ns.Prices, itemID)
     if not (ok and type(value) == "number") then return nil end
     if value < self.MIN_WORTH then return nil end
     if ns.Prices.IsCredible and not ns.Prices.IsCredible(value) then return nil end
+    if not Snipe.Believable(value, Snipe.CheapestSeen(itemID)) then return nil end
     return value
+end
+
+--- The cheapest other seller's listing the last look at the book saw
+--- (a lone low one included), or nil when it was not read.
+function Snipe.CheapestSeen(itemID)
+    local prices = ns.Prices
+    if not (prices and prices.GetTable) then return nil end
+    local ok, table_ = pcall(prices.GetTable, prices)
+    local record = ok and type(table_) == "table" and table_[itemID]
+    if type(record) ~= "table" then return nil end
+    local cheapest = tonumber(record.rivalMin)
+    local low = tonumber(record.ignoredLow)
+    if low and (not cheapest or low < cheapest) then cheapest = low end
+    if cheapest and cheapest > 0 then return cheapest end
+end
+
+--- Can this average be trusted, next to the cheapest listing seen?
+function Snipe.Believable(worth, cheapest)
+    if type(worth) ~= "number" then return false end
+    if type(cheapest) ~= "number" or cheapest <= 0 then return true end
+    return worth <= cheapest * Snipe.TRUST_GAP
 end
 
 --- Is this price a deal against its worth?

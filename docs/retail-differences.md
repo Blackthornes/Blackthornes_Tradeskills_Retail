@@ -344,6 +344,13 @@ Two Retail tweaks in `Logic/Snipe.lua`, tested in `tools/test_snipe.lua`:
   sortable as "worth"), and "Deal" became "Under Average". Headings sort
   with the house's gold arrow, not a "v" or "^" (`SnipeView.PaintHead`).
   Tested in `tools/test_snipeview.lua`.
+- Grey items and silly averages (the owner, 2026-11-03, after greys showed
+  an Average of 68,627g): Priced Items never watches a grey (poor) item,
+  since greys are worth what a vendor pays, and leaves out an item whose
+  average is over `Snipe.TRUST_GAP` (10) times the cheapest other
+  seller's listing the last look at the book saw (`Snipe.CheapestSeen`,
+  `Snipe.Believable`): such a book is mostly silly prices. To Disenchant
+  already watched green and better only. Tested in `tools/test_snipe.lua`.
 
 - Columns from the right (2026-11-03): the Snipe columns (Average, Price,
   Under Average) hang from the row's right edge at fixed widths
