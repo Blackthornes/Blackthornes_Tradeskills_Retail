@@ -43,6 +43,8 @@ Snipe.BUY_WAIT = 15
 Snipe.MOST_UNITS = 20
 -- Pool building: items looked at a frame.
 Snipe.SLICE = 300
+-- Retail: Priced Items leaves gear out (see WorthOf).
+Snipe.PRICED_SKIPS_GEAR = true
 
 Snipe.SOUND = [[Interface\AddOns\]] .. (ns.ADDON_NAME or "Blackthornes_TS") .. [[\Media\Sounds\snipe-bell-single.ogg]]
 
@@ -149,6 +151,13 @@ function Snipe:WorthOf(itemID, mode)
         local okv, value = pcall(ns.Disenchant.GetValue, ns.Disenchant, itemID)
         if not (okv and type(value) == "number" and value > 0) then return nil end
         return AfterCut(value)
+    end
+    -- Retail: one gear item ID covers many item levels, and its one price
+    -- mixes them, so a cheap low-level copy would look like a deal. Gear is
+    -- left to To Disenchant.
+    if Snipe.PRICED_SKIPS_GEAR then
+        local class = ItemClass(itemID)
+        if class == 2 or class == 4 then return nil end
     end
     if not (ns.Prices and ns.Prices.GetValue) then return nil end
     local ok, value = pcall(ns.Prices.GetValue, ns.Prices, itemID)
@@ -398,8 +407,12 @@ local function IsStack(itemID)
         if enum and value == enum.Item then return 1 end
         return nil
     end)
-    -- 1 is an item sold one at a time; anything else the game says is a stack.
-    return ok and status ~= nil and status ~= 1
+    -- 2 is a stack (a commodity). 1 is an item sold one at a time, and 0 is
+    -- not known yet (Retail, item not loaded): both go to the game's search.
+    if not ok or status == nil then return false end
+    local enum = rawget(_G, "Enum") and Enum.ItemCommodityStatus
+    local commodity = (enum and enum.Commodity) or 2
+    return status == commodity
 end
 
 --- Units to ask for: the listing, the cap and the most-at-once allow.
