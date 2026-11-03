@@ -8,7 +8,7 @@ local Theme = ns.Theme
 local Widgets = ns.Widgets
 local Util = ns.Util
 
-local ROW_HEIGHT = 36
+local ROW_HEIGHT = 30
 local ICON_SIZE = 24
 local STRIP_HEIGHT = 84
 local HEAD_HEIGHT = 18
@@ -80,20 +80,28 @@ end
 -- Rows
 --------------------------------------------------------------------------------
 
+-- One line a find (the house kit: rows are one line): the item, its price
+-- under the Price heading and how far under worth under the Deal heading.
+-- How many are up and what one is worth go on the hover. The numbers are
+-- filled before anything about the item, so the item's name can never
+-- leave them blank (a find once showed its name and nothing else).
+local PRICE_X = -5        -- the Price heading's left edge, from the middle
+local DEAL_WIDTH = 110
+
 local function CreateRow(row)
     row.icon = Theme.CreateItemIcon(row, ICON_SIZE)
     row.icon:SetPoint("LEFT", row, "LEFT", 8, 0)
+    row.badge = Theme.CreateLabel(row, "small", "muted", "RIGHT")
+    row.badge:SetPoint("RIGHT", row, "RIGHT", -8, 0)
+    row.badge:SetWidth(DEAL_WIDTH)
+    row.price = Theme.CreateLabel(row, "small", "text")
+    row.price:SetPoint("LEFT", row, "CENTER", PRICE_X, 0)
+    row.price:SetPoint("RIGHT", row.badge, "LEFT", -8, 0)
     row.name = Theme.CreateLabel(row, "small", "text")
-    row.name:SetPoint("TOPLEFT", row, "TOPLEFT", 8 + ICON_SIZE + 8, -4)
-    row.name:SetPoint("TOPRIGHT", row, "TOPRIGHT", -110, -4)
-    row.detail = Theme.CreateLabel(row, "tiny", "muted")
-    row.detail:SetPoint("TOPLEFT", row, "TOPLEFT", 8 + ICON_SIZE + 8, -20)
-    row.detail:SetPoint("TOPRIGHT", row, "TOPRIGHT", -110, -20)
-    row.detail:SetWordWrap(false)
+    row.name:SetPoint("LEFT", row, "LEFT", 8 + ICON_SIZE + 8, 0)
+    row.name:SetPoint("RIGHT", row, "CENTER", PRICE_X - 10, 0)
     row.edge = Theme.AccentStripe(row, 3)
     row.edge:Hide()
-    row.badge = Theme.CreateLabel(row, "tiny", "muted", "RIGHT")
-    row.badge:SetPoint("RIGHT", row, "RIGHT", -8, 0)
 end
 
 local function IsPending(find)
@@ -101,19 +109,26 @@ local function IsPending(find)
     return pending and pending.find == find
 end
 
-local function UpdateRow(row, find)
-    if not find then return end
-    Theme.SetItemIcon(row.icon, find.itemID)
-    local label = ItemName(find.itemID)
-    if Theme.SetRowName then Theme.SetRowName(row.name, label) else row.name:SetText(label) end
-    local r, g, b = Util.GetItemQualityColor and Util.GetItemQualityColor(find.itemID)
-    if not r then r, g, b = Theme.Unpack("text") end
-    row.name:SetTextColor(r, g, b)
-
+--- The hover's line under the item: how many are up, the price each and
+--- what one is worth.
+function SnipeView.DetailText(find)
     local qty = find.qty or 1
     local text = L.Format("%1$s each, worth %2$s", Colored(find.price), Colored(find.worth))
     if qty > 1 then text = L.Format("%1$d for sale. %2$s", qty, text) end
-    row.detail:SetText(text)
+    return text
+end
+
+-- The plain name, so the row's rarity colour shows: a link carries its own
+-- colour and brackets.
+local function PlainName(itemID)
+    local label = ItemName(itemID)
+    if type(label) == "string" then return label:match("%[(.-)%]") or label end
+    return L["that item"]
+end
+
+local function UpdateRow(row, find)
+    if not find then return end
+    row.price:SetText(Colored(find.price))
 
     local pending = Snipe().pending
     if IsPending(find) then
@@ -131,12 +146,24 @@ local function UpdateRow(row, find)
         row.badge:SetTextColor(Theme.Unpack("profit"))
         row.edge:Hide()
     end
+
+    Theme.SetItemIcon(row.icon, find.itemID)
+    local label = PlainName(find.itemID)
+    if Theme.SetRowName then Theme.SetRowName(row.name, label) else row.name:SetText(label) end
+    local r, g, b = Util.GetItemQualityColor and Util.GetItemQualityColor(find.itemID)
+    if not r then r, g, b = Theme.Unpack("text") end
+    row.name:SetTextColor(r, g, b)
 end
 
 local function ShowTooltip(row, find)
-    if find and Widgets.ShowItemTooltip then
+    if not find then return end
+    if Widgets.ShowItemTooltip then
         Widgets.ShowItemTooltip(row, "ANCHOR_LEFT", find.itemID)
+    else
+        GameTooltip:SetOwner(row, "ANCHOR_LEFT")
     end
+    GameTooltip:AddLine(SnipeView.DetailText(find), 1, 1, 1, true)
+    GameTooltip:Show()
 end
 
 local function ClickRow(find, _, mouseButton)
@@ -245,11 +272,11 @@ function SnipeView:BuildStrip(body, topAnchor)
     local cols = CreateFrame("Frame", nil, body)
     cols:SetHeight(COLUMNS_HEIGHT)
     self.cols = cols
-    local function Head(key, text, point, x)
+    local function Head(key, text, point, x, justify)
         local button = CreateFrame("Button", nil, cols)
         button:SetHeight(COLUMNS_HEIGHT)
-        local label = Theme.CreateLabel(button, "tiny", "muted")
-        label:SetPoint("LEFT", button, "LEFT", 0, 0)
+        local label = Theme.CreateLabel(button, "tiny", "muted", justify)
+        label:SetPoint(justify == "RIGHT" and "RIGHT" or "LEFT", button, justify == "RIGHT" and "RIGHT" or "LEFT", 0, 0)
         button.label, button.key, button.text = label, key, text
         button:SetWidth(90)
         button:SetPoint(point, cols, point, x, 0)
@@ -259,7 +286,7 @@ function SnipeView:BuildStrip(body, topAnchor)
     self.heads = {
         Head("name", L["Item"], "LEFT", 8 + ICON_SIZE + 8),
         Head("price", L["Price"], "CENTER", 40),
-        Head("deal", L["Deal"], "RIGHT", -22),
+        Head("deal", L["Deal"], "RIGHT", -8, "RIGHT"),
     }
 end
 
@@ -377,8 +404,9 @@ function SnipeView:Refresh(force)
     self.pct.editBox:EnableMouse(not running)
     self.pct:SetAlpha(running and 0.5 or 1)
 
+    -- The note over the list goes before the rows are drawn, so it never
+    -- sits on top of a find.
     local rows = self:SortedFinds()
-    self.list:SetData(rows)
     if #rows == 0 then
         self.empty:SetText(running and L["Looking for deals..."]
             or L["Nothing to snipe yet. Scan the auction house first."])
@@ -386,6 +414,7 @@ function SnipeView:Refresh(force)
     else
         self.empty:Hide()
     end
+    self.list:SetData(rows)
 
     self.note:SetText(self:Summary())
     self.go:SetText(running and L["Stop"] or L["Start Sniping"])
