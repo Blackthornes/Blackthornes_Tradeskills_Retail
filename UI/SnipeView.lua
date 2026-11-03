@@ -150,8 +150,11 @@ local function UpdateRow(row, find)
     Theme.SetItemIcon(row.icon, find.itemID)
     local label = PlainName(find.itemID)
     if Theme.SetRowName then Theme.SetRowName(row.name, label) else row.name:SetText(label) end
-    local r, g, b = Util.GetItemQualityColor and Util.GetItemQualityColor(find.itemID)
-    if not r then r, g, b = Theme.Unpack("text") end
+    -- Called on its own line: "f and f(x)" keeps only the first of the three
+    -- colours, and SetTextColor(r, nil, nil) is a Lua error on Retail.
+    local r, g, b
+    if Util.GetItemQualityColor then r, g, b = Util.GetItemQualityColor(find.itemID) end
+    if not (r and g and b) then r, g, b = Theme.Unpack("text") end
     row.name:SetTextColor(r, g, b)
 end
 
