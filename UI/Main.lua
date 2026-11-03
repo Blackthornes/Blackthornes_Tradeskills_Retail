@@ -2528,7 +2528,17 @@ function TSTabs:Settle()
         TSTabs:HangStrips()
         local okPlace, place = pcall(One and One.Place or function() end)
         if okPlace and place == "auction" and PostPanel and PostPanel.Attach then
-            pcall(PostPanel.Attach, PostPanel)
+            if TSTabs:OneStillUp(One) then
+                -- Another addon was picked on the rail: the drawer is a tab
+                -- of the one window, so it waits there at the size it had,
+                -- rather than coming out small over the window's left side.
+                -- Tradeskills' button brings it back; the one window closing
+                -- brings it out on its own (TSTabs:WatchOneClose).
+                PostPanel.waitingForOne = true
+                TSTabs:WatchOneClose()
+            else
+                pcall(PostPanel.Attach, PostPanel)
+            end
         end
         -- Lit again on the usual row too, which missed any pick made here.
         local key = UI.activeTab
@@ -2539,6 +2549,42 @@ function TSTabs:Settle()
         if key and UI.tabs and UI.tabs[key] then UI:SelectTab(key) end
         self.beforeAH = nil
     end
+end
+
+--- The one window's own frame, or nil before it is built.
+function TSTabs.OneFrame()
+    local hub = rawget(_G, "BlackthornesWindow")
+    local frame = type(hub) == "table" and hub.frame or rawget(_G, "BlackthornesOneWindow")
+    if type(frame) == "table" and type(frame.IsShown) == "function" then return frame end
+    return nil
+end
+
+--- True while the one window is still up beside the auction house: then
+--- Tradeskills left it because another addon was picked, not because it
+--- closed (it is already hidden when its OnHide hands Tradeskills back).
+function TSTabs:OneStillUp(One)
+    if not One then return false end
+    local okOpen, isOpen = pcall(One.IsOpen)
+    if not (okOpen and isOpen) then return false end
+    local okDocked, docked = pcall(One.Docked)
+    return okDocked and docked == true
+end
+
+--- Once: when the one window closes while the drawer waits in it, the
+--- drawer comes out on its own beside the auction house again.
+function TSTabs:WatchOneClose()
+    if self.watchingClose then return end
+    local frame = TSTabs.OneFrame()
+    if not (frame and frame.HookScript) then return end
+    self.watchingClose = true
+    frame:HookScript("OnHide", function()
+        local PostPanel = ns.PostPanel
+        if not (PostPanel and PostPanel.waitingForOne) then return end
+        PostPanel.waitingForOne = nil
+        if ns.Scanner and ns.Scanner.isAuctionHouseOpen and PostPanel.Attach then
+            pcall(PostPanel.Attach, PostPanel)
+        end
+    end)
 end
 
 --- What Tradeskills gives the one window when it joins.

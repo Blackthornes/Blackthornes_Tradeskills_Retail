@@ -345,8 +345,33 @@ Two Retail tweaks in `Logic/Snipe.lua`, tested in `tools/test_snipe.lua`:
   with the house's gold arrow, not a "v" or "^" (`SnipeView.PaintHead`).
   Tested in `tools/test_snipeview.lua`.
 
+- Columns from the right (2026-11-03): the Snipe columns (Average, Price,
+  Under Average) hang from the row's right edge at fixed widths
+  (`AVERAGE_RIGHT`, `PRICE_RIGHT`, `DEAL_RIGHT` in `UI/SnipeView.lua`), so
+  they fit the drawer at its own width beside the auction house; laid from
+  the middle, Price had no room there and its heading ran into Under
+  Average.
+
 **Sync rule: Blend.** At the next catch-up the five commits are already
 here, so their lines merge as the same change; keep the two tweaks.
+
+## 3f. The drawer waits in the one window (2026-11-03)
+
+At the auction house, with the one window docked there on Tradeskills'
+Auction House tab, picking another addon on the rail (Farmer from the
+minimap) used to hand the drawer back to its own frame: it came out at its
+own width and scale, smaller than the one window had it, and on top of the
+one window's left side. Now `TSTabs:Settle` leaves it waiting while the one
+window is still up and docked (`TSTabs:OneStillUp`,
+`PostPanel.waitingForOne`; `PostPanel:Attach` does nothing while it is
+set), so the drawer is a tab like the rest: Tradeskills' button brings it
+back at the size it had. The one window closing brings the drawer out on
+its own beside the auction house (`TSTabs:WatchOneClose`, a hook on the
+one window's OnHide). Forever has the same code; this is Retail's fix.
+Tested in `tools/test_onewindow.lua`.
+
+**Sync rule: Keep Retail** for those lines of `TSTabs:Settle` and
+`PostPanel:Attach`; blend anything else Forever changes there.
 
 ## 4. Still Forever's, for later steps
 

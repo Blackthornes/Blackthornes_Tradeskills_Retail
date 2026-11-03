@@ -807,6 +807,7 @@ function PostPanel:IntoOne(container)
     if not container then return end
     local frame = self:Build()
     self.inOne = true
+    self.waitingForOne = nil
     self.attached = false
     self.dockedTo, self.dockedLeft = nil, nil
 
@@ -1396,8 +1397,9 @@ end
 
 --- Dock to the right of the auction house, as tall as there is room for.
 function PostPanel:Attach()
-    -- The one window's Auction House tab holds it: nothing to place.
-    if self.inOne then return end
+    -- The one window's Auction House tab holds it: nothing to place. Also
+    -- while it waits there with another addon picked (TSTabs:Settle).
+    if self.inOne or self.waitingForOne then return end
     local frame = self:Build()
     local auctionFrame = ns.UI:FindAuctionFrame()
 
@@ -2026,6 +2028,7 @@ end
 function PostPanel:Hide()
     -- The auction house closed: nothing should bring the panel back now.
     self:OutOfOne()
+    self.waitingForOne = nil
     self.attached = false
     self.closedThisVisit = false
     self.dockedTo, self.dockedLeft = nil, nil
