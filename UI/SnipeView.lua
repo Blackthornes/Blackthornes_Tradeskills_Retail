@@ -223,8 +223,8 @@ function SnipeView:BuildStrip(body, topAnchor)
     -- Watch
     local watchLabel = Row(-56, L["Watch:"])
     local options = {
-        { value = "priced", label = L["Priced Items"] },
-        { value = "disenchant", label = L["To Disenchant"] },
+        { value = "priced", text = L["Priced Items"] },
+        { value = "disenchant", text = L["To Disenchant"] },
     }
     local watch = Widgets.CreateDropdown(strip, options, function(value)
         ns.Config:Set("snipeWatch", value)
