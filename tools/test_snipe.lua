@@ -81,6 +81,21 @@ assert(Snipe:WorthOf(10, "priced") == 50000, "a trade good is watched")
 assert(Snipe:WorthOf(20, "priced") == nil, "armour is left out")
 assert(Snipe:WorthOf(30, "priced") == nil, "a weapon is left out")
 
+-- 7b. Grey items are never watched, and an average far above the cheapest
+--     listing the last scan saw (a book full of silly prices) is not trusted.
+C_Item.GetItemQualityByID = function(id) return id == 40 and 0 or 1 end
+classes[40] = 7
+assert(Snipe:WorthOf(40, "priced") == nil, "a grey item is left out")
+assert(Snipe:WorthOf(10, "priced") == 50000, "a white trade good is still watched")
+ns.Prices.GetTable = function() return { [10] = { rivalMin = 50 } } end
+assert(Snipe:WorthOf(10, "priced") == nil, "an average 1000 times the cheapest is not trusted")
+ns.Prices.GetTable = function() return { [10] = { rivalMin = 9000, ignoredLow = 40 } } end
+assert(Snipe:WorthOf(10, "priced") == nil, "a lone low listing counts as the cheapest seen")
+ns.Prices.GetTable = function() return { [10] = { rivalMin = 20000 } } end
+assert(Snipe:WorthOf(10, "priced") == 50000, "an average near the cheapest is trusted")
+assert(Snipe.Believable(50000, nil) == true, "no book read, the average stands")
+ns.Prices.GetTable = nil
+
 -- 8. Not known yet goes to the game's search.
 local searched, started = nil, false
 ns.UI = { SearchAuctionHouse = function(_, id) searched = id end }
