@@ -58,6 +58,7 @@ function SnipeView:SortedFinds()
     table.sort(rows, function(a, b)
         local x, y
         if key == "price" then x, y = a.price or 0, b.price or 0
+        elseif key == "worth" then x, y = a.worth or 0, b.worth or 0
         elseif key == "name" then x, y = ItemName(a.itemID), ItemName(b.itemID)
         else x, y = DealOf(a), DealOf(b) end
         if x == y then return (a.itemID or 0) < (b.itemID or 0) end
@@ -85,7 +86,8 @@ end
 -- How many are up and what one is worth go on the hover. The numbers are
 -- filled before anything about the item, so the item's name can never
 -- leave them blank (a find once showed its name and nothing else).
-local PRICE_X = -5        -- the Price heading's left edge, from the middle
+local AVERAGE_X = -5      -- the Average heading's left edge, from the middle
+local PRICE_X = 115       -- the Price heading's left edge, from the middle
 local DEAL_WIDTH = 110
 
 local SORT_ARROW = [[Interface\AddOns\Blackthornes_TS\Media\Frame\SortArrow]]
@@ -120,9 +122,14 @@ local function CreateRow(row)
     row.price = Theme.CreateLabel(row, "small", "text")
     row.price:SetPoint("LEFT", row, "CENTER", PRICE_X, 0)
     row.price:SetPoint("RIGHT", row.badge, "LEFT", -8, 0)
+    -- What one usually sells for (the worth the deal is worked out from),
+    -- so the gap to the price can be seen (the owner, 2026-11-03).
+    row.average = Theme.CreateLabel(row, "small", "text")
+    row.average:SetPoint("LEFT", row, "CENTER", AVERAGE_X, 0)
+    row.average:SetPoint("RIGHT", row, "CENTER", PRICE_X - 8, 0)
     row.name = Theme.CreateLabel(row, "small", "text")
     row.name:SetPoint("LEFT", row, "LEFT", 8 + ICON_SIZE + 8, 0)
-    row.name:SetPoint("RIGHT", row, "CENTER", PRICE_X - 10, 0)
+    row.name:SetPoint("RIGHT", row, "CENTER", AVERAGE_X - 10, 0)
     row.edge = Theme.AccentStripe(row, 3)
     row.edge:Hide()
 end
@@ -152,6 +159,7 @@ end
 local function UpdateRow(row, find)
     if not find then return end
     row.price:SetText(Colored(find.price))
+    row.average:SetText(Colored(find.worth))
 
     local pending = Snipe().pending
     if IsPending(find) then
@@ -318,8 +326,9 @@ function SnipeView:BuildStrip(body, topAnchor)
     end
     self.heads = {
         Head("name", L["Item"], "LEFT", 8 + ICON_SIZE + 8),
-        Head("price", L["Price"], "CENTER", 40),
-        Head("deal", L["Deal"], "RIGHT", -8, "RIGHT"),
+        Head("worth", L["Average"], "CENTER", AVERAGE_X + 45),
+        Head("price", L["Price"], "CENTER", PRICE_X + 45),
+        Head("deal", L["Under Average"], "RIGHT", -8, "RIGHT"),
     }
 end
 

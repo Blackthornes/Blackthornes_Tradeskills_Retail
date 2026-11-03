@@ -134,6 +134,7 @@ local row = SV.list.rows[1]
 check("name is plain", row.name.text, "Stringy Wolf Meat")
 check("name in its colour, all three parts", row.name.color and row.name.color[3], 1)
 check("price under Price", Plain(row.price.text), "1s 50c")
+check("average under Average", Plain(row.average.text), "9s 00c")
 check("deal under Deal", row.badge.text, "83% under")
 check("the note hides", SV.empty.shown, false)
 for _, head in ipairs(SV.heads) do

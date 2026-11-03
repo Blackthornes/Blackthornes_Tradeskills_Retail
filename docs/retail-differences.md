@@ -339,6 +339,11 @@ Two Retail tweaks in `Logic/Snipe.lua`, tested in `tools/test_snipe.lua`:
   looks at items the last scan saw for sale first, then the most worth,
   not by item ID (which put the oldest items first). Tested in
   `tools/test_snipe.lua`.
+- Average column (the owner, 2026-11-03, his word): each row shows what one
+  usually sells for under "Average" (`row.average`, the find's `worth`,
+  sortable as "worth"), and "Deal" became "Under Average". Headings sort
+  with the house's gold arrow, not a "v" or "^" (`SnipeView.PaintHead`).
+  Tested in `tools/test_snipeview.lua`.
 
 **Sync rule: Blend.** At the next catch-up the five commits are already
 here, so their lines merge as the same change; keep the two tweaks.
