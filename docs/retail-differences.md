@@ -330,6 +330,15 @@ Two Retail tweaks in `Logic/Snipe.lua`, tested in `tools/test_snipe.lua`:
   the item; how many and the worth moved to the hover
   (`SnipeView.DetailText`). The Watch box reads `text` (PR #9). Tested in
   `tools/test_snipeview.lua`.
+- The bell and the order (2026-11-03, the bell kept ringing for one find
+  in game): `Snipe.IsOurs` takes browse rows as ours only when every row
+  is an item of the batch we searched and our search went out
+  (`mine.sent`), so the player's own search or another addon's no longer
+  drops the batch's finds; `Snipe:ShouldTell` rings only for a new item
+  or a lower price (`Snipe.told`, the session only). `Snipe.SortPool`
+  looks at items the last scan saw for sale first, then the most worth,
+  not by item ID (which put the oldest items first). Tested in
+  `tools/test_snipe.lua`.
 
 **Sync rule: Blend.** At the next catch-up the five commits are already
 here, so their lines merge as the same change; keep the two tweaks.
