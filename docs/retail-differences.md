@@ -309,6 +309,25 @@ table). PR: "Learn next and disenchanting from Retail's own data"
 the `OWN_RESULTS_ONLY` checks; take Forever's other changes. A Forever
 change to the left-out data files is **Forever only**.
 
+## 3e. Snipe, brought over from Forever (2026-11-03)
+
+Forever's Snipe tab (Forever commits `7ca2095`, `323b202`, `6265313`,
+`bb78d6c`, `d1b1de1`) came over by cherry-pick, not a merge of Forever's
+main: the TOC lists `Logic\Snipe.lua` and `UI\SnipeView.lua` but not
+Forever's `UI\FavorsView.lua`, and CLAUDE.md took the Snipe section only.
+Two Retail tweaks in `Logic/Snipe.lua`, tested in `tools/test_snipe.lua`:
+
+- `Snipe.PRICED_SKIPS_GEAR = true`: Priced Items leaves weapons and armor
+  out (`WorthOf`), since one Retail gear item ID covers many item levels
+  and its one price mixes them. To Disenchant still watches gear, valued
+  from your own breaks (`OWN_RESULTS_ONLY`).
+- The local `IsStack` buys a stack only when the game says commodity
+  (`Enum.ItemCommodityStatus.Commodity`, 2); not known yet (0) goes to the
+  game's own search, like an item sold one at a time.
+
+**Sync rule: Blend.** At the next catch-up the five commits are already
+here, so their lines merge as the same change; keep the two tweaks.
+
 ## 4. Still Forever's, for later steps
 
 Not changed in the copy, on purpose (no new player features yet). Each is
