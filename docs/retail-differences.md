@@ -324,6 +324,12 @@ Two Retail tweaks in `Logic/Snipe.lua`, tested in `tools/test_snipe.lua`:
 - The local `IsStack` buys a stack only when the game says commodity
   (`Enum.ItemCommodityStatus.Commodity`, 2); not known yet (0) goes to the
   game's own search, like an item sold one at a time.
+- `UI/SnipeView.lua` rows are one line (2026-11-03, after a find showed
+  its name and blank Price and Deal in game): the plain name, the price
+  under Price, "N% under" under Deal, both filled before anything about
+  the item; how many and the worth moved to the hover
+  (`SnipeView.DetailText`). The Watch box reads `text` (PR #9). Tested in
+  `tools/test_snipeview.lua`.
 
 **Sync rule: Blend.** At the next catch-up the five commits are already
 here, so their lines merge as the same change; keep the two tweaks.
